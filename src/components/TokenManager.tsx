@@ -1,22 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Environment } from '../types';
-import { RefreshCw, Key, CheckCircle, AlertCircle, Edit2, X, Bookmark, ExternalLink } from 'lucide-react';
-import { generateBookmarkletCode, getBookmarkletLabel } from '../utils/bookmarklet';
+import { RefreshCw, Key, CheckCircle, AlertCircle, ExternalLink, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { openTokenPage, generateBookmarkletCode, copyToClipboard } from '../utils/bookmarklet';
+import { debugLog } from '../utils/debugLog';
 import { DebugPanel } from './DebugPanel';
-
-type ErrorType = 'cors' | 'network' | 'auth' | null;
-
-const ACCESS_TOKEN_DOC_URL: Record<Environment, string> = {
-  stg: 'https://ng-web.certifyos.com/api/users/access-token',
-  production: 'https://ng.certifyos.com/api/users/access-token',
-};
 
 interface TokenManagerProps {
   environment: Environment;
   token: string | null;
   isLoading: boolean;
   error: string | null;
-  errorType: ErrorType;
+  errorType?: 'cors' | 'network' | 'auth' | null;
   onRefresh: () => void;
   onManualToken: (token: string) => void;
 }
@@ -26,166 +20,134 @@ export function TokenManager({
   token,
   isLoading,
   error,
-  errorType,
   onRefresh,
   onManualToken,
 }: TokenManagerProps) {
-  const manualTokenHref = ACCESS_TOKEN_DOC_URL[environment];
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [showBookmarkletGuide, setShowBookmarkletGuide] = useState(false);
-  const [manualTokenValue, setManualTokenValue] = useState('');
+  const [pasteValue, setPasteValue] = useState('');
+  const [showBookmarklet, setShowBookmarklet] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  const bookmarkletHref = useMemo(
+  const bookmarkletCode = useMemo(
     () => generateBookmarkletCode(appOrigin, environment),
     [appOrigin, environment]
   );
-  const bookmarkletLabel = getBookmarkletLabel(environment);
 
   const getTokenPreview = (t: string): string => {
     if (t.length <= 25) return t;
     return `${t.substring(0, 10)}...${t.substring(t.length - 10)}`;
   };
 
-  const handleManualSubmit = () => {
-    if (manualTokenValue.trim()) {
-      onManualToken(manualTokenValue.trim());
-      setShowManualInput(false);
-      setManualTokenValue('');
+  const handlePasteSubmit = useCallback(() => {
+    const trimmed = pasteValue.trim();
+    if (!trimmed) return;
+    debugLog.info(`[TokenManager] Manual paste — ${trimmed.length} chars`);
+    onManualToken(trimmed);
+    setPasteValue('');
+  }, [pasteValue, onManualToken]);
+
+  const handleGetToken = useCallback(() => {
+    debugLog.info(`[TokenManager] Opening token page for env=${environment}`);
+    openTokenPage(environment);
+  }, [environment]);
+
+  const handleCopyBookmarklet = useCallback(async () => {
+    const ok = await copyToClipboard(bookmarkletCode);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [bookmarkletCode]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
           <Key className="w-5 h-5 flex-shrink-0" />
           Access Token
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {!showManualInput && (
-            <button
-              onClick={() => setShowManualInput(true)}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-gray-light dark:bg-gray-700 text-brand-charcoal dark:text-gray-300 rounded-lg hover:bg-brand-gray-light/80 dark:hover:bg-gray-600 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              Paste Token
-            </button>
-          )}
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Fetching...' : 'Auto Fetch'}
-          </button>
-        </div>
+        <button
+          onClick={onRefresh}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-gray-light dark:bg-gray-700 text-brand-charcoal dark:text-gray-300 rounded-lg hover:bg-brand-gray-light/80 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Trying...' : 'Auto Fetch'}
+        </button>
       </div>
 
-      {/* Bookmarklet one-click solution */}
-      <div className="mb-4 rounded-lg border border-brand-purple/20 bg-brand-purple-light dark:border-brand-purple/40 dark:bg-brand-purple-dark/20 px-4 py-4">
-        <div className="flex items-start gap-3">
-          <Bookmark className="w-5 h-5 text-brand-purple dark:text-purple-400 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-brand-midnight dark:text-white text-sm mb-1">
-              One-Click Token (Recommended)
-            </p>
-            <p className="text-sm text-brand-charcoal dark:text-gray-300 mb-3">
-              Drag the button below to your bookmarks bar. Then click it on any CertifyOS page — it grabs your token and opens this app with it pre-filled.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {/* The actual draggable bookmarklet link */}
-              <a
-                href={bookmarkletHref}
-                onClick={(e) => e.preventDefault()}
-                draggable
-                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-purple text-white text-sm font-medium rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:bg-brand-purple-dark transition-colors select-none"
-                title="Drag me to your bookmarks bar!"
-              >
-                <Bookmark className="w-4 h-4" />
-                {bookmarkletLabel}
-              </a>
-
-              <button
-                onClick={() => setShowBookmarkletGuide((v) => !v)}
-                className="text-sm text-brand-purple dark:text-purple-400 underline hover:text-brand-purple-dark dark:hover:text-purple-300"
-              >
-                {showBookmarkletGuide ? 'Hide guide' : 'How does this work?'}
-              </button>
-            </div>
-
-            {showBookmarkletGuide && (
-              <ol className="mt-3 ml-1 space-y-1.5 text-sm text-brand-charcoal dark:text-gray-400 list-decimal list-inside">
-                <li>
-                  <strong>Drag</strong> the purple &ldquo;{bookmarkletLabel}&rdquo; button to your bookmarks bar.
-                </li>
-                <li>
-                  Open any CertifyOS page (
-                  <a href="https://ng-web.certifyos.com" target="_blank" rel="noopener noreferrer" className="text-brand-purple underline dark:text-purple-400">
-                    STG
-                  </a>{' '}
-                  or{' '}
-                  <a href="https://ng.certifyos.com" target="_blank" rel="noopener noreferrer" className="text-brand-purple underline dark:text-purple-400">
-                    Prod
-                  </a>
-                  ) and <strong>log in</strong>.
-                </li>
-                <li>
-                  <strong>Click</strong> the bookmark. It fetches your token from the same CertifyOS origin (cookies included) and opens this app with it.
-                </li>
-                <li>
-                  Done! The token is loaded automatically — no copy-paste needed.
-                </li>
-              </ol>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Manual input section */}
-      {showManualInput && (
-        <div className="mb-4 p-4 bg-brand-purple-light dark:bg-brand-purple-dark/20 border border-brand-purple/20 dark:border-brand-purple/30 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <label className="font-medium text-brand-purple-dark dark:text-brand-purple-light">Paste Token</label>
-            <button
-              onClick={() => setShowManualInput(false)}
-              className="text-brand-purple dark:text-brand-purple-light hover:text-brand-purple-dark dark:hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-sm text-brand-charcoal dark:text-gray-400 mb-3">
-            Open{' '}
-            <a
-              href={manualTokenHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-brand-purple underline font-medium hover:text-brand-purple-dark dark:text-purple-400 dark:hover:text-purple-300"
-            >
-              access-token JSON <ExternalLink className="w-3 h-3" />
-            </a>{' '}
-            in a new tab (while logged into CertifyOS), copy the <code className="rounded bg-black/5 px-1 font-mono text-xs dark:bg-white/10">accessToken</code> value, and paste below.
+      {/* Primary flow: Open token page + paste */}
+      {!token && (
+        <div className="mb-4 rounded-lg border border-brand-purple/20 bg-brand-purple-light dark:border-brand-purple/40 dark:bg-brand-purple-dark/20 p-4">
+          <p className="text-sm font-semibold text-brand-midnight dark:text-white mb-2">
+            Get Token from CertifyOS
           </p>
+          <ol className="text-sm text-brand-charcoal dark:text-gray-400 space-y-1.5 mb-3 list-decimal list-inside">
+            <li>Make sure you're <strong>logged in</strong> to CertifyOS ({environment === 'stg' ? 'STG' : 'Production'}).</li>
+            <li>Click the button below — it opens the token JSON page in a new tab.</li>
+            <li>Copy the <code className="rounded bg-black/5 px-1 font-mono text-xs dark:bg-white/10">accessToken</code> value (the long string starting with <code className="rounded bg-black/5 px-1 font-mono text-xs dark:bg-white/10">eyJ...</code>).</li>
+            <li>Paste it in the field below.</li>
+          </ol>
+
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              onClick={handleGetToken}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-brand-purple text-white text-sm font-medium rounded-lg hover:bg-brand-purple-dark transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open Token Page ({environment === 'stg' ? 'STG' : 'Prod'})
+            </button>
+          </div>
+
           <div className="flex gap-2">
             <input
               type="text"
-              value={manualTokenValue}
-              onChange={(e) => setManualTokenValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
-              placeholder="eyJhbGciOi..."
+              value={pasteValue}
+              onChange={(e) => setPasteValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handlePasteSubmit()}
+              placeholder="Paste accessToken here (eyJhbGciOi...)"
               className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 text-brand-midnight dark:text-white rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-brand-purple outline-none text-sm font-mono"
             />
             <button
-              onClick={handleManualSubmit}
-              disabled={!manualTokenValue.trim()}
-              className="px-4 py-2 bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={handlePasteSubmit}
+              disabled={!pasteValue.trim()}
+              className="px-4 py-2 bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
-              Set
+              Set Token
             </button>
+          </div>
+
+          {/* Bookmarklet power-user option */}
+          <div className="mt-4 border-t border-brand-purple/15 dark:border-brand-purple/25 pt-3">
+            <button
+              onClick={() => setShowBookmarklet((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-brand-purple dark:text-purple-400 hover:text-brand-purple-dark dark:hover:text-purple-300"
+            >
+              {showBookmarklet ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              Power user: one-click bookmarklet setup
+            </button>
+
+            {showBookmarklet && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-brand-charcoal dark:text-gray-500">
+                  Copy the code below, create a new bookmark in your browser, and paste it as the URL.
+                  Then click that bookmark while on any CertifyOS page — it will fetch the token and open this app automatically.
+                </p>
+                <div className="relative">
+                  <pre className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono text-brand-charcoal dark:text-gray-400 overflow-x-auto whitespace-pre-wrap break-all max-h-24">
+                    {bookmarkletCode}
+                  </pre>
+                  <button
+                    onClick={handleCopyBookmarklet}
+                    className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {copied ? <><Check className="w-3 h-3 text-green-500" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -196,11 +158,6 @@ export function TokenManager({
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
           <div className="text-sm text-red-700 dark:text-red-400">
             {error}
-            {(errorType === 'cors' || errorType === 'auth') && (
-              <p className="mt-2 text-red-600 dark:text-red-500">
-                Use the <strong>bookmarklet</strong> above (recommended) or <strong>Paste Token</strong> to provide a token.
-              </p>
-            )}
           </div>
         </div>
       )}
@@ -219,23 +176,25 @@ export function TokenManager({
             Token is valid for 24 hours. Refresh if you encounter authentication errors.
           </p>
         </div>
-      ) : (
+      ) : !isLoading && !error && (
         <div className="p-4 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
-            <span className="text-yellow-700 dark:text-yellow-400">
-              {isLoading ? 'Fetching token...' : 'No token available.'}
-            </span>
+            <span className="text-yellow-700 dark:text-yellow-400">No token yet.</span>
           </div>
-          {!isLoading && !error && (
-            <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
-              Use the bookmarklet above, or click "Paste Token" to provide your JWT.
-            </p>
-          )}
         </div>
       )}
 
-      {/* Debug log panel */}
+      {isLoading && !token && (
+        <div className="p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin" />
+            <span className="text-blue-700 dark:text-blue-400">Attempting auto-fetch...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Debug log */}
       <DebugPanel />
     </div>
   );
