@@ -34,18 +34,19 @@ export function Layout({ children, environment }: LayoutProps) {
     <div className="min-h-screen bg-brand-ivory dark:bg-gray-900 font-sans transition-colors duration-200">
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-brand-gray-light dark:border-gray-700 transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center p-1 bg-white dark:bg-gray-800 rounded-lg">
-                <img src="/CertifyOS%20LockUp%20Deep%20Purple%20+%20Charcoal.png" alt="CertifyOS Logo" className="h-8 dark:hidden block" />
-                <img src="/CertifyOS%20LockUp%20Lavender%20Tint%20+%20White.png" alt="CertifyOS Logo" className="h-8 hidden dark:block" />
+          <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex shrink-0 items-center justify-center p-1">
+                {/* URL-safe filenames (avoid + / spaces breaking on CDN) */}
+                <img src={`${import.meta.env.BASE_URL}certifyos-logo-light.png`} alt="CertifyOS" width={160} height={32} className="h-8 w-auto max-w-[10rem] object-contain object-left dark:hidden" decoding="async" />
+                <img src={`${import.meta.env.BASE_URL}certifyos-logo-dark.png`} alt="CertifyOS" width={160} height={32} className="hidden h-8 w-auto max-w-[10rem] object-contain object-left dark:block" decoding="async" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-brand-midnight dark:text-white">Workflow Revert</h1>
-                <p className="text-sm text-brand-gray dark:text-gray-400">Credentialing & Facility Workflow Status Management</p>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-brand-midnight dark:text-white truncate sm:whitespace-normal">Workflow Revert</h1>
+                <p className="text-sm text-brand-charcoal dark:text-gray-400 max-w-xl">Credentialing &amp; Facility workflow revert</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
               <a
                 href={apiDocsUrl}
                 target="_blank"

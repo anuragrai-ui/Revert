@@ -46,15 +46,35 @@ export function TokenManager({
   };
 
   const isCorsError = errorType === 'cors';
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 rounded-lg border border-brand-purple/25 bg-brand-purple-light dark:border-brand-purple/40 dark:bg-brand-purple-dark/25 px-4 py-3 text-sm text-brand-charcoal dark:text-gray-300">
+        <strong className="text-brand-purple-dark dark:text-brand-purple-light">This app URL:</strong>{' '}
+        <code className="rounded bg-black/5 px-1.5 py-0.5 font-mono text-xs dark:bg-white/10">{appOrigin || '—'}</code>
+        <span className="block pt-2 text-brand-gray dark:text-gray-400">
+          Auto Fetch talks to Certify OS through this app’s server, but browsers still do not send your{' '}
+          <code className="rounded bg-black/10 px-1 dark:bg-white/10">certifyos.com</code> session cookies to{' '}
+          <code className="rounded bg-black/10 px-1 dark:bg-white/10">vercel.app</code>. You will usually see{' '}
+          <strong className="text-brand-charcoal dark:text-gray-300">accessToken: null</strong> until you{' '}
+          <button
+            type="button"
+            onClick={() => setShowManualInput(true)}
+            className="font-semibold text-brand-purple underline dark:text-purple-300"
+          >
+            paste a token manually
+          </button>
+          {' '}from the access-token JSON tab while logged into Certify OS.
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
-          <Key className="w-5 h-5" />
+          <Key className="w-5 h-5 flex-shrink-0" />
           Access Token
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {!showManualInput && (
             <button
               onClick={() => setShowManualInput(true)}
@@ -125,6 +145,11 @@ export function TokenManager({
             {isCorsError && (
               <div className="mt-2 text-sm text-orange-600 dark:text-orange-500">
                 <strong>Tip:</strong> Use <strong>Manual Input</strong> above — log into CertifyOS, open the access-token URL in another tab, copy the JWT, and paste here.
+              </div>
+            )}
+            {errorType === 'auth' && (
+              <div className="mt-2 text-sm text-red-700/90 dark:text-red-300">
+                <strong>Tip:</strong> On <code className="rounded bg-black/5 px-1 font-mono dark:bg-white/10">vercel.app</code> you must use <strong>Manual Input</strong> with a token from the access-token JSON page.
               </div>
             )}
           </div>

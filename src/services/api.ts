@@ -148,7 +148,7 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
         token: null,
         errorType: 'auth',
         errorMessage:
-          'The token endpoint responded but returned no token. Stay logged into CertifyOS while using this app or use Manual Input (open Certify OS in another tab → access-token JSON → paste).',
+          'Certify responded with accessToken null. Hosted apps (such as revertapi.vercel.app) cannot use your certifyos.com login cookies—use Manual Input: open the access-token JSON in another tab while logged in, copy the JWT, paste here.',
       };
     }
     return {
