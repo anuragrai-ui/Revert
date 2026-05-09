@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import type { Environment } from '../types';
 import { RefreshCw, Key, CheckCircle, AlertCircle, Edit2, X, Bookmark, ExternalLink } from 'lucide-react';
 import { generateBookmarkletCode, getBookmarkletLabel } from '../utils/bookmarklet';
+import { DebugPanel } from './DebugPanel';
 
 type ErrorType = 'cors' | 'network' | 'auth' | null;
 
@@ -233,6 +234,9 @@ export function TokenManager({
           )}
         </div>
       )}
+
+      {/* Debug log panel */}
+      <DebugPanel />
     </div>
   );
 }

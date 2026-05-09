@@ -1,4 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { debugLog } from '../utils/debugLog';
+
+const TAG = '[useTokenFromHash]';
 
 /**
  * On mount, checks window.location.hash for `#token=<jwt>`.
@@ -13,14 +16,30 @@ export function useTokenFromHash(onToken: (jwt: string) => void): void {
     ran.current = true;
 
     const hash = window.location.hash;
-    if (!hash.startsWith('#token=')) return;
+    debugLog.info(`${TAG} hash="${hash.substring(0, 40)}${hash.length > 40 ? '...' : ''}"`);
+
+    if (!hash.startsWith('#token=')) {
+      debugLog.info(`${TAG} No #token= prefix — skipping`);
+      return;
+    }
 
     const jwt = decodeURIComponent(hash.slice('#token='.length));
-    if (!jwt || !jwt.startsWith('eyJ')) return;
+    debugLog.info(`${TAG} JWT length=${jwt.length} prefix="${jwt.substring(0, 20)}..."`);
 
+    if (!jwt) {
+      debugLog.warn(`${TAG} JWT empty after decode — skipping`);
+      return;
+    }
+
+    if (!jwt.startsWith('eyJ')) {
+      debugLog.warn(`${TAG} JWT doesn't start with "eyJ" — got "${jwt.substring(0, 10)}". Skipping.`);
+      return;
+    }
+
+    debugLog.info(`${TAG} Valid JWT — calling onToken()`);
     onToken(jwt);
 
-    // Remove token from URL without a page reload
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    debugLog.info(`${TAG} Hash cleared from URL`);
   }, [onToken]);
 }

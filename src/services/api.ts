@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 import type { Environment, ApiConfig, RevertRequest, AccessTokenResponse, ApiError } from '../types';
+import { debugLog } from '../utils/debugLog';
 
 // ─── JWT decoder (no verify — server already validates) ──────────────────────
 interface JwtPayload {
@@ -137,13 +138,26 @@ export interface TokenFetchResult {
 
 export async function fetchAccessToken(environment: Environment): Promise<TokenFetchResult> {
   const config = getApiConfig(environment);
+  const TAG = '[fetchAccessToken]';
+
+  debugLog.info(`${TAG} env=${environment} tokenUrl=${config.tokenUrl}`);
+  debugLog.info(`${TAG} origin=${typeof window !== 'undefined' ? window.location.origin : 'SSR'}`);
+  console.log(`${TAG} env=${environment} tokenUrl=${config.tokenUrl}`);
+
   try {
     const response = await axios.get<AccessTokenResponse>(config.tokenUrl, {
       withCredentials: true,
       timeout: 10000,
     });
+
+    debugLog.info(`${TAG} HTTP ${response.status}`);
+    debugLog.info(`${TAG} response keys: ${Object.keys(response.data).join(', ')}`);
+    debugLog.info(`${TAG} accessToken type=${typeof response.data.accessToken}, value=${response.data.accessToken ? String(response.data.accessToken).substring(0, 20) + '...' : 'NULL'}`);
+    console.log(`${TAG} HTTP ${response.status}`, response.data);
+
     const accessToken = response.data.accessToken;
     if (!accessToken) {
+      debugLog.warn(`${TAG} Token is null — cookies not forwarded to this domain`);
       return {
         token: null,
         errorType: 'auth',
@@ -151,6 +165,8 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
           'CertifyOS returned accessToken: null — your session cookies are not available on this domain. Use the bookmarklet (one click) or paste a token manually.',
       };
     }
+
+    debugLog.info(`${TAG} Token acquired (${accessToken.length} chars)`);
     return {
       token: accessToken,
       errorType: null,
@@ -158,10 +174,10 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
     };
   } catch (error) {
     const axiosError = error as AxiosError;
-    console.error('Failed to fetch access token:', error);
+    const errDetail = `msg=${axiosError.message} code=${axiosError.code} status=${axiosError.response?.status} hasResponse=${!!axiosError.response}`;
+    debugLog.error(`${TAG} FAILED: ${errDetail}`);
+    console.error(`${TAG} FAILED`, axiosError);
 
-    // Typical when the browser blocks cross-origin scripts (calling CertifyOS directly instead of same-origin proxy)
-    // or TLS / mixed-content issues outside dev / Vercel.
     if (!axiosError.response && axiosError.message?.includes('Network Error')) {
       return {
         token: null,
@@ -171,7 +187,6 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
       };
     }
 
-    // Check for other specific errors
     if (axiosError.response?.status === 401) {
       return {
         token: null,
