@@ -20,7 +20,9 @@ dist-ssr
 # Cloud Function build output
 functions/dist
 
-# Editor directories and files
+# Vercel (local link metadata — contains project id / team slug)
+.vercel
+
 .vscode/*
 !.vscode/extensions.json
 .idea
