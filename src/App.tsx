@@ -7,6 +7,7 @@ import { WorkflowRevertForm } from './components/WorkflowRevertForm';
 import { ResponseDisplay } from './components/ResponseDisplay';
 import { useAccessToken } from './hooks/useAccessToken';
 import { useWorkflowRevert } from './hooks/useWorkflowRevert';
+import { useTokenFromHash } from './hooks/useTokenFromHash';
 import { generateCurlCommand } from './services/api';
 
 function App() {
@@ -14,6 +15,8 @@ function App() {
   const [curlCommand, setCurlCommand] = useState<string>('');
 
   const { token, isLoading: isTokenLoading, error: tokenError, errorType, refreshToken, setManualToken } = useAccessToken(environment);
+
+  useTokenFromHash(setManualToken);
   const { isLoading: isRevertLoading, error: revertError, response, revertWorkflow, clearError, clearResponse } = useWorkflowRevert(environment);
 
   const handleEnvironmentChange = useCallback((newEnv: Environment) => {

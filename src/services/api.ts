@@ -148,7 +148,7 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
         token: null,
         errorType: 'auth',
         errorMessage:
-          'Certify responded with accessToken null. Hosted apps (such as revertapi.vercel.app) cannot use your certifyos.com login cookies—use Manual Input: open the access-token JSON in another tab while logged in, copy the JWT, paste here.',
+          'CertifyOS returned accessToken: null — your session cookies are not available on this domain. Use the bookmarklet (one click) or paste a token manually.',
       };
     }
     return {
@@ -167,7 +167,7 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
         token: null,
         errorType: 'cors',
         errorMessage:
-          'This app could not reach the Certify OS token endpoint (often a cross-origin/network block when not using same-origin proxies). Deploy on Vercel with the bundled `/api` routes, open the access-token JSON in another tab while logged in, then use Manual Input below.',
+          'Could not reach the CertifyOS token endpoint (cross-origin block). Use the bookmarklet or paste a token manually.',
       };
     }
 

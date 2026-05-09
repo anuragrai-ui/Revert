@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Environment } from '../types';
-import { RefreshCw, Key, CheckCircle, AlertCircle, Edit2, X } from 'lucide-react';
+import { RefreshCw, Key, CheckCircle, AlertCircle, Edit2, X, Bookmark, ExternalLink } from 'lucide-react';
+import { generateBookmarkletCode, getBookmarkletLabel } from '../utils/bookmarklet';
 
 type ErrorType = 'cors' | 'network' | 'auth' | null;
 
@@ -30,7 +31,16 @@ export function TokenManager({
 }: TokenManagerProps) {
   const manualTokenHref = ACCESS_TOKEN_DOC_URL[environment];
   const [showManualInput, setShowManualInput] = useState(false);
+  const [showBookmarkletGuide, setShowBookmarkletGuide] = useState(false);
   const [manualTokenValue, setManualTokenValue] = useState('');
+
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const bookmarkletHref = useMemo(
+    () => generateBookmarkletCode(appOrigin, environment),
+    [appOrigin, environment]
+  );
+  const bookmarkletLabel = getBookmarkletLabel(environment);
 
   const getTokenPreview = (t: string): string => {
     if (t.length <= 25) return t;
@@ -45,30 +55,9 @@ export function TokenManager({
     }
   };
 
-  const isCorsError = errorType === 'cors';
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
-      <div className="mb-4 rounded-lg border border-brand-purple/25 bg-brand-purple-light dark:border-brand-purple/40 dark:bg-brand-purple-dark/25 px-4 py-3 text-sm text-brand-charcoal dark:text-gray-300">
-        <strong className="text-brand-purple-dark dark:text-brand-purple-light">This app URL:</strong>{' '}
-        <code className="rounded bg-black/5 px-1.5 py-0.5 font-mono text-xs dark:bg-white/10">{appOrigin || '—'}</code>
-        <span className="block pt-2 text-brand-gray dark:text-gray-400">
-          Auto Fetch talks to Certify OS through this app’s server, but browsers still do not send your{' '}
-          <code className="rounded bg-black/10 px-1 dark:bg-white/10">certifyos.com</code> session cookies to{' '}
-          <code className="rounded bg-black/10 px-1 dark:bg-white/10">vercel.app</code>. You will usually see{' '}
-          <strong className="text-brand-charcoal dark:text-gray-300">accessToken: null</strong> until you{' '}
-          <button
-            type="button"
-            onClick={() => setShowManualInput(true)}
-            className="font-semibold text-brand-purple underline dark:text-purple-300"
-          >
-            paste a token manually
-          </button>
-          {' '}from the access-token JSON tab while logged into Certify OS.
-        </span>
-      </div>
-
+      {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
           <Key className="w-5 h-5 flex-shrink-0" />
@@ -78,16 +67,16 @@ export function TokenManager({
           {!showManualInput && (
             <button
               onClick={() => setShowManualInput(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-gray-light dark:bg-gray-700 text-brand-charcoal dark:text-gray-300 rounded-lg hover:bg-brand-gray-light/80 dark:hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-gray-light dark:bg-gray-700 text-brand-charcoal dark:text-gray-300 rounded-lg hover:bg-brand-gray-light/80 dark:hover:bg-gray-600 transition-colors"
             >
               <Edit2 className="w-4 h-4" />
-              Manual Input
+              Paste Token
             </button>
           )}
           <button
             onClick={onRefresh}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Fetching...' : 'Auto Fetch'}
@@ -95,10 +84,72 @@ export function TokenManager({
         </div>
       </div>
 
+      {/* Bookmarklet one-click solution */}
+      <div className="mb-4 rounded-lg border border-brand-purple/20 bg-brand-purple-light dark:border-brand-purple/40 dark:bg-brand-purple-dark/20 px-4 py-4">
+        <div className="flex items-start gap-3">
+          <Bookmark className="w-5 h-5 text-brand-purple dark:text-purple-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-brand-midnight dark:text-white text-sm mb-1">
+              One-Click Token (Recommended)
+            </p>
+            <p className="text-sm text-brand-charcoal dark:text-gray-300 mb-3">
+              Drag the button below to your bookmarks bar. Then click it on any CertifyOS page — it grabs your token and opens this app with it pre-filled.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* The actual draggable bookmarklet link */}
+              <a
+                href={bookmarkletHref}
+                onClick={(e) => e.preventDefault()}
+                draggable
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-purple text-white text-sm font-medium rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:bg-brand-purple-dark transition-colors select-none"
+                title="Drag me to your bookmarks bar!"
+              >
+                <Bookmark className="w-4 h-4" />
+                {bookmarkletLabel}
+              </a>
+
+              <button
+                onClick={() => setShowBookmarkletGuide((v) => !v)}
+                className="text-sm text-brand-purple dark:text-purple-400 underline hover:text-brand-purple-dark dark:hover:text-purple-300"
+              >
+                {showBookmarkletGuide ? 'Hide guide' : 'How does this work?'}
+              </button>
+            </div>
+
+            {showBookmarkletGuide && (
+              <ol className="mt-3 ml-1 space-y-1.5 text-sm text-brand-charcoal dark:text-gray-400 list-decimal list-inside">
+                <li>
+                  <strong>Drag</strong> the purple &ldquo;{bookmarkletLabel}&rdquo; button to your bookmarks bar.
+                </li>
+                <li>
+                  Open any CertifyOS page (
+                  <a href="https://ng-web.certifyos.com" target="_blank" rel="noopener noreferrer" className="text-brand-purple underline dark:text-purple-400">
+                    STG
+                  </a>{' '}
+                  or{' '}
+                  <a href="https://ng.certifyos.com" target="_blank" rel="noopener noreferrer" className="text-brand-purple underline dark:text-purple-400">
+                    Prod
+                  </a>
+                  ) and <strong>log in</strong>.
+                </li>
+                <li>
+                  <strong>Click</strong> the bookmark. It fetches your token from the same CertifyOS origin (cookies included) and opens this app with it.
+                </li>
+                <li>
+                  Done! The token is loaded automatically — no copy-paste needed.
+                </li>
+              </ol>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Manual input section */}
       {showManualInput && (
         <div className="mb-4 p-4 bg-brand-purple-light dark:bg-brand-purple-dark/20 border border-brand-purple/20 dark:border-brand-purple/30 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <label className="font-medium text-brand-purple-dark dark:text-brand-purple-light">Paste Token from Browser</label>
+            <label className="font-medium text-brand-purple-dark dark:text-brand-purple-light">Paste Token</label>
             <button
               onClick={() => setShowManualInput(false)}
               className="text-brand-purple dark:text-brand-purple-light hover:text-brand-purple-dark dark:hover:text-white"
@@ -106,24 +157,25 @@ export function TokenManager({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-sm text-brand-purple dark:text-brand-purple-light mb-3">
+          <p className="text-sm text-brand-charcoal dark:text-gray-400 mb-3">
             Open{' '}
             <a
               href={manualTokenHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline font-medium hover:text-brand-purple-dark dark:hover:text-white"
+              className="inline-flex items-center gap-1 text-brand-purple underline font-medium hover:text-brand-purple-dark dark:text-purple-400 dark:hover:text-purple-300"
             >
-              this link
+              access-token JSON <ExternalLink className="w-3 h-3" />
             </a>{' '}
-            in a new tab, copy the accessToken value, and paste it here.
+            in a new tab (while logged into CertifyOS), copy the <code className="rounded bg-black/5 px-1 font-mono text-xs dark:bg-white/10">accessToken</code> value, and paste below.
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={manualTokenValue}
               onChange={(e) => setManualTokenValue(e.target.value)}
-              placeholder="Paste token here (eyJhbGciOi...)"
+              onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+              placeholder="eyJhbGciOi..."
               className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 text-brand-midnight dark:text-white rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-brand-purple outline-none text-sm font-mono"
             />
             <button
@@ -131,31 +183,28 @@ export function TokenManager({
               disabled={!manualTokenValue.trim()}
               className="px-4 py-2 bg-brand-purple text-white rounded-lg hover:bg-brand-purple-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Set Token
+              Set
             </button>
           </div>
         </div>
       )}
 
+      {/* Error display */}
       {error && (
-        <div className={`mb-4 p-4 rounded-lg flex items-start gap-3 ${isCorsError ? 'bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30' : 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30'}`}>
-          <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isCorsError ? 'text-orange-500 dark:text-orange-400' : 'text-red-500 dark:text-red-400'}`} />
-          <div className={`text-sm ${isCorsError ? 'text-orange-700 dark:text-orange-400' : 'text-red-700 dark:text-red-400'}`}>
+        <div className="mb-4 p-4 rounded-lg flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500 dark:text-red-400" />
+          <div className="text-sm text-red-700 dark:text-red-400">
             {error}
-            {isCorsError && (
-              <div className="mt-2 text-sm text-orange-600 dark:text-orange-500">
-                <strong>Tip:</strong> Use <strong>Manual Input</strong> above — log into CertifyOS, open the access-token URL in another tab, copy the JWT, and paste here.
-              </div>
-            )}
-            {errorType === 'auth' && (
-              <div className="mt-2 text-sm text-red-700/90 dark:text-red-300">
-                <strong>Tip:</strong> On <code className="rounded bg-black/5 px-1 font-mono dark:bg-white/10">vercel.app</code> you must use <strong>Manual Input</strong> with a token from the access-token JSON page.
-              </div>
+            {(errorType === 'cors' || errorType === 'auth') && (
+              <p className="mt-2 text-red-600 dark:text-red-500">
+                Use the <strong>bookmarklet</strong> above (recommended) or <strong>Paste Token</strong> to provide a token.
+              </p>
             )}
           </div>
         </div>
       )}
 
+      {/* Token status */}
       {token ? (
         <div className="p-4 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
@@ -179,7 +228,7 @@ export function TokenManager({
           </div>
           {!isLoading && !error && (
             <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
-              Click "Auto Fetch" to try automatic fetching, or use "Manual Input" to paste the token directly.
+              Use the bookmarklet above, or click "Paste Token" to provide your JWT.
             </p>
           )}
         </div>
