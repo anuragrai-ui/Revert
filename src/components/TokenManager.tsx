@@ -1,9 +1,16 @@
 import { useState } from 'react';
+import type { Environment } from '../types';
 import { RefreshCw, Key, CheckCircle, AlertCircle, Edit2, X } from 'lucide-react';
 
 type ErrorType = 'cors' | 'network' | 'auth' | null;
 
+const ACCESS_TOKEN_DOC_URL: Record<Environment, string> = {
+  stg: 'https://ng-web.certifyos.com/api/users/access-token',
+  production: 'https://ng.certifyos.com/api/users/access-token',
+};
+
 interface TokenManagerProps {
+  environment: Environment;
   token: string | null;
   isLoading: boolean;
   error: string | null;
@@ -12,7 +19,16 @@ interface TokenManagerProps {
   onManualToken: (token: string) => void;
 }
 
-export function TokenManager({ token, isLoading, error, errorType, onRefresh, onManualToken }: TokenManagerProps) {
+export function TokenManager({
+  environment,
+  token,
+  isLoading,
+  error,
+  errorType,
+  onRefresh,
+  onManualToken,
+}: TokenManagerProps) {
+  const manualTokenHref = ACCESS_TOKEN_DOC_URL[environment];
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualTokenValue, setManualTokenValue] = useState('');
 
@@ -71,7 +87,16 @@ export function TokenManager({ token, isLoading, error, errorType, onRefresh, on
             </button>
           </div>
           <p className="text-sm text-brand-purple dark:text-brand-purple-light mb-3">
-            Open <a href="https://ng-web.certifyos.com/api/users/access-token" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-brand-purple-dark dark:hover:text-white">this link</a> in a new tab, copy the accessToken value, and paste it here.
+            Open{' '}
+            <a
+              href={manualTokenHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-medium hover:text-brand-purple-dark dark:hover:text-white"
+            >
+              this link
+            </a>{' '}
+            in a new tab, copy the accessToken value, and paste it here.
           </p>
           <div className="flex gap-2">
             <input
@@ -99,7 +124,7 @@ export function TokenManager({ token, isLoading, error, errorType, onRefresh, on
             {error}
             {isCorsError && (
               <div className="mt-2 text-sm text-orange-600 dark:text-orange-500">
-                <strong>Workaround:</strong> Click "Manual Input" above and paste the token you see in the browser.
+                <strong>Tip:</strong> Use <strong>Manual Input</strong> above — log into CertifyOS, open the access-token URL in another tab, copy the JWT, and paste here.
               </div>
             )}
           </div>

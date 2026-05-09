@@ -79,14 +79,15 @@ export function buildLogEntry(
 }
 
 const STG_CONFIG: ApiConfig = {
-  tokenUrl: import.meta.env?.DEV ? '/api/users/access-token/stg' : 'https://ng-web.certifyos.com/api/users/access-token',
+  /** Same-origin path → Vite dev proxy locally, Vercel serverless `/api/users/access-token/[env].ts` in production */
+  tokenUrl: '/api/users/access-token/stg',
   baseUrl: 'https://ng-api-stg.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
 };
 
 const PROD_CONFIG: ApiConfig = {
-  tokenUrl: import.meta.env?.DEV ? '/api/users/access-token/prod' : 'https://ng.certifyos.com/api/users/access-token',
+  tokenUrl: '/api/users/access-token/prod',
   baseUrl: 'https://ng-api-production.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
@@ -141,8 +142,17 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
       withCredentials: true,
       timeout: 10000,
     });
+    const accessToken = response.data.accessToken;
+    if (!accessToken) {
+      return {
+        token: null,
+        errorType: 'auth',
+        errorMessage:
+          'The token endpoint responded but returned no token. Stay logged into CertifyOS while using this app or use Manual Input (open Certify OS in another tab → access-token JSON → paste).',
+      };
+    }
     return {
-      token: response.data.accessToken,
+      token: accessToken,
       errorType: null,
       errorMessage: null,
     };
@@ -150,12 +160,14 @@ export async function fetchAccessToken(environment: Environment): Promise<TokenF
     const axiosError = error as AxiosError;
     console.error('Failed to fetch access token:', error);
 
-    // Check for CORS error (no response means request was blocked)
+    // Typical when the browser blocks cross-origin scripts (calling CertifyOS directly instead of same-origin proxy)
+    // or TLS / mixed-content issues outside dev / Vercel.
     if (!axiosError.response && axiosError.message?.includes('Network Error')) {
       return {
         token: null,
         errorType: 'cors',
-        errorMessage: 'CORS Error: The browser blocked the request. This happens when running on localhost. Please use the manual token input option below.',
+        errorMessage:
+          'This app could not reach the Certify OS token endpoint (often a cross-origin/network block when not using same-origin proxies). Deploy on Vercel with the bundled `/api` routes, open the access-token JSON in another tab while logged in, then use Manual Input below.',
       };
     }
 

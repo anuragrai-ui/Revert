@@ -55,6 +55,7 @@ function App() {
       />
 
       <TokenManager
+        environment={environment}
         token={token}
         isLoading={isTokenLoading}
         error={tokenError}
