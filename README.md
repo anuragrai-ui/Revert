@@ -1,6 +1,6 @@
-# CertifyOS Workflow Revert UI
+# Revert
 
-A React-based UI for testing and using the CertifyOS Credentialing Workflow Revert Status APIs. Supports both STG (testing) and Production environments with automatic token fetching.
+CertifyOS Workflow Revert UI — a React-based UI for testing and using the CertifyOS Credentialing Workflow Revert Status APIs. Supports both STG (testing) and Production environments with automatic token fetching.
 
 ## Features
 
