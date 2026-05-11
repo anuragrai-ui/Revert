@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import type { WorkflowType, RevertFormData } from '../types';
+import type { WorkflowType, RevertFormData, Environment } from '../types';
 import { Building2, User, Send, AlertTriangle } from 'lucide-react';
+import { ConfirmationDialog } from './ConfirmationDialog';
 
 interface WorkflowRevertFormProps {
   onSubmit: (data: RevertFormData) => void;
   isLoading: boolean;
   hasToken: boolean;
+  environment: Environment;
 }
 
 const WORKFLOW_TYPE_OPTIONS: { value: WorkflowType; label: string; icon: React.ReactNode; description: string }[] = [
@@ -23,13 +25,14 @@ const WORKFLOW_TYPE_OPTIONS: { value: WorkflowType; label: string; icon: React.R
   },
 ];
 
-export function WorkflowRevertForm({ onSubmit, isLoading, hasToken }: WorkflowRevertFormProps) {
+export function WorkflowRevertForm({ onSubmit, isLoading, hasToken, environment }: WorkflowRevertFormProps) {
   const [formData, setFormData] = useState<RevertFormData>({
     workflowId: '',
     organizationId: localStorage.getItem('organizationId') || '',
     reason: '',
     workflowType: 'credentialing',
   });
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     const savedOrgId = localStorage.getItem('organizationId');
@@ -41,7 +44,16 @@ export function WorkflowRevertForm({ onSubmit, isLoading, hasToken }: WorkflowRe
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('organizationId', formData.organizationId);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirm = () => {
+    setShowConfirmation(false);
     onSubmit(formData);
+  };
+
+  const handleCancel = () => {
+    setShowConfirmation(false);
   };
 
   const updateField = <K extends keyof RevertFormData>(field: K, value: RevertFormData[K]) => {
@@ -158,6 +170,17 @@ export function WorkflowRevertForm({ onSubmit, isLoading, hasToken }: WorkflowRe
           </p>
         )}
       </form>
+
+      {/* Confirmation Dialog */}
+      {showConfirmation && (
+        <ConfirmationDialog
+          formData={formData}
+          environment={environment}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 }

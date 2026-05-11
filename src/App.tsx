@@ -68,6 +68,7 @@ function App() {
         onSubmit={handleSubmit}
         isLoading={isRevertLoading}
         hasToken={!!token}
+        environment={environment}
       />
 
       <ResponseDisplay
