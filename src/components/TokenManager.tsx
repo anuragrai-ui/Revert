@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Environment } from '../types';
-import { RefreshCw, Key, CheckCircle, AlertCircle, ExternalLink, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
-import { openTokenPage, generateBookmarkletCode, copyToClipboard } from '../utils/bookmarklet';
+import { RefreshCw, Key, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { openTokenPage } from '../utils/bookmarklet';
 import { debugLog } from '../utils/debugLog';
 import { DebugPanel } from './DebugPanel';
 
@@ -24,15 +24,6 @@ export function TokenManager({
   onManualToken,
 }: TokenManagerProps) {
   const [pasteValue, setPasteValue] = useState('');
-  const [showBookmarklet, setShowBookmarklet] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-
-  const bookmarkletCode = useMemo(
-    () => generateBookmarkletCode(appOrigin, environment),
-    [appOrigin, environment]
-  );
 
   const getTokenPreview = (t: string): string => {
     if (t.length <= 25) return t;
@@ -51,14 +42,6 @@ export function TokenManager({
     debugLog.info(`[TokenManager] Opening token page for env=${environment}`);
     openTokenPage(environment);
   }, [environment]);
-
-  const handleCopyBookmarklet = useCallback(async () => {
-    const ok = await copyToClipboard(bookmarkletCode);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [bookmarkletCode]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
@@ -117,37 +100,6 @@ export function TokenManager({
             >
               Set Token
             </button>
-          </div>
-
-          {/* Bookmarklet power-user option */}
-          <div className="mt-4 border-t border-brand-purple/15 dark:border-brand-purple/25 pt-3">
-            <button
-              onClick={() => setShowBookmarklet((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-brand-purple dark:text-purple-400 hover:text-brand-purple-dark dark:hover:text-purple-300"
-            >
-              {showBookmarklet ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              Power user: one-click bookmarklet setup
-            </button>
-
-            {showBookmarklet && (
-              <div className="mt-2 space-y-2">
-                <p className="text-xs text-brand-charcoal dark:text-gray-500">
-                  Copy the code below, create a new bookmark in your browser, and paste it as the URL.
-                  Then click that bookmark while on any CertifyOS page — it will fetch the token and open this app automatically.
-                </p>
-                <div className="relative">
-                  <pre className="p-3 bg-gray-100 dark:bg-gray-900 rounded-lg text-xs font-mono text-brand-charcoal dark:text-gray-400 overflow-x-auto whitespace-pre-wrap break-all max-h-24">
-                    {bookmarkletCode}
-                  </pre>
-                  <button
-                    onClick={handleCopyBookmarklet}
-                    className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    {copied ? <><Check className="w-3 h-3 text-green-500" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
