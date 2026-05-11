@@ -1,26 +1,19 @@
 import { useState, useCallback } from 'react';
 import type { Environment } from '../types';
-import { RefreshCw, Key, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Key, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { openTokenPage } from '../utils/bookmarklet';
-import { debugLog } from '../utils/debugLog';
-import { DebugPanel } from './DebugPanel';
 
 interface TokenManagerProps {
   environment: Environment;
   token: string | null;
-  isLoading: boolean;
   error: string | null;
-  errorType?: 'cors' | 'network' | 'auth' | null;
-  onRefresh: () => void;
   onManualToken: (token: string) => void;
 }
 
 export function TokenManager({
   environment,
   token,
-  isLoading,
   error,
-  onRefresh,
   onManualToken,
 }: TokenManagerProps) {
   const [pasteValue, setPasteValue] = useState('');
@@ -33,32 +26,22 @@ export function TokenManager({
   const handlePasteSubmit = useCallback(() => {
     const trimmed = pasteValue.trim();
     if (!trimmed) return;
-    debugLog.info(`[TokenManager] Manual paste — ${trimmed.length} chars`);
     onManualToken(trimmed);
     setPasteValue('');
   }, [pasteValue, onManualToken]);
 
   const handleGetToken = useCallback(() => {
-    debugLog.info(`[TokenManager] Opening token page for env=${environment}`);
     openTokenPage(environment);
   }, [environment]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2 mb-4">
         <h2 className="text-lg font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
           <Key className="w-5 h-5 flex-shrink-0" />
           Access Token
         </h2>
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-brand-gray-light dark:bg-gray-700 text-brand-charcoal dark:text-gray-300 rounded-lg hover:bg-brand-gray-light/80 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Trying...' : 'Auto Fetch'}
-        </button>
       </div>
 
       {/* Primary flow: Open token page + paste */}
@@ -128,7 +111,7 @@ export function TokenManager({
             Token is valid for 24 hours. Refresh if you encounter authentication errors.
           </p>
         </div>
-      ) : !isLoading && !error && (
+      ) : !error && (
         <div className="p-4 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
@@ -136,18 +119,6 @@ export function TokenManager({
           </div>
         </div>
       )}
-
-      {isLoading && !token && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin" />
-            <span className="text-blue-700 dark:text-blue-400">Attempting auto-fetch...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Debug log */}
-      <DebugPanel />
     </div>
   );
 }

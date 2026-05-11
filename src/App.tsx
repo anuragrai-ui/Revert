@@ -14,7 +14,7 @@ function App() {
   const [environment, setEnvironment] = useState<Environment>('stg');
   const [curlCommand, setCurlCommand] = useState<string>('');
 
-  const { token, isLoading: isTokenLoading, error: tokenError, errorType, refreshToken, setManualToken } = useAccessToken(environment);
+  const { token, error: tokenError, setManualToken } = useAccessToken(environment);
 
   useTokenFromHash(setManualToken);
   const { isLoading: isRevertLoading, error: revertError, response, revertWorkflow, clearError, clearResponse } = useWorkflowRevert(environment);
@@ -60,10 +60,7 @@ function App() {
       <TokenManager
         environment={environment}
         token={token}
-        isLoading={isTokenLoading}
         error={tokenError}
-        errorType={errorType}
-        onRefresh={refreshToken}
         onManualToken={setManualToken}
       />
 
