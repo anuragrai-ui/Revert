@@ -1,0 +1,134 @@
+name: Deploy Revert UI
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-revert
+  cancel-in-progress: true
+
+jobs:
+  set-vars:
+    runs-on: ubuntu-latest
+    outputs:
+      GCP_PROJECT: ${{ vars.GCP_PROJECT_STAGING }}
+      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT_STAGING }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER_STAGING }}
+      GCP_REGION: ${{ vars.GCP_REGION_STAGING || 'us-central1' }}
+      BQ_DATASET_ID: ${{ vars.BQ_DATASET_ID_STAGING || 'certifyos_audit' }}
+      BQ_TABLE_ID: ${{ vars.BQ_TABLE_ID_STAGING || 'workflow_revert_logs' }}
+      ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS_STAGING }}
+    steps:
+      - run: echo "Exposing env vars"
+
+  deploy-function:
+    needs: [set-vars]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      function_url: ${{ steps.get-url.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ needs.set-vars.outputs.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ needs.set-vars.outputs.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # google-github-actions/setup-gcloud@v3
+
+      - name: Build Cloud Function
+        working-directory: functions
+        run: npm ci && npm run build
+
+      - name: Deploy Cloud Function
+        working-directory: functions
+        run: |
+          gcloud functions deploy certifyos-revert-logger \
+            --runtime nodejs20 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --entry-point logUsage \
+            --source . \
+            --region ${{ needs.set-vars.outputs.GCP_REGION }} \
+            --project ${{ needs.set-vars.outputs.GCP_PROJECT }} \
+            --set-env-vars GCP_PROJECT_ID=${{ needs.set-vars.outputs.GCP_PROJECT }},BQ_DATASET_ID=${{ needs.set-vars.outputs.BQ_DATASET_ID }},BQ_TABLE_ID=${{ needs.set-vars.outputs.BQ_TABLE_ID }},ALLOWED_ORIGINS=${{ needs.set-vars.outputs.ALLOWED_ORIGINS }}
+
+      - name: Get function URL
+        id: get-url
+        run: |
+          URL=$(gcloud functions describe certifyos-revert-logger \
+            --region ${{ needs.set-vars.outputs.GCP_REGION }} \
+            --project ${{ needs.set-vars.outputs.GCP_PROJECT }} \
+            --format "value(httpsTrigger.url)")
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+  build:
+    needs: [set-vars, deploy-function]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE: us-central1-docker.pkg.dev/${{ needs.set-vars.outputs.GCP_PROJECT }}/app-deployments/revert-ui:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ needs.set-vars.outputs.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ needs.set-vars.outputs.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg VITE_LOG_ENDPOINT=${{ needs.deploy-function.outputs.function_url }} \
+            -t ${{ env.IMAGE }} .
+
+      - name: Push Docker image
+        run: docker push ${{ env.IMAGE }}
+
+  deploy:
+    needs: [set-vars, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE: us-central1-docker.pkg.dev/${{ needs.set-vars.outputs.GCP_PROJECT }}/app-deployments/revert-ui:latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ needs.set-vars.outputs.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ needs.set-vars.outputs.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # google-github-actions/setup-gcloud@v3
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # google-github-actions/deploy-cloudrun@v3
+        id: deploy
+        with:
+          service: revert-ui
+          image: ${{ env.IMAGE }}
+          region: ${{ needs.set-vars.outputs.GCP_REGION }}
+          project_id: ${{ needs.set-vars.outputs.GCP_PROJECT }}
+          flags: |
+            --port=8080
+            --memory=512Mi
+            --platform=managed
+            --allow-unauthenticated
+
+      - name: Print service URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
