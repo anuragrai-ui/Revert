@@ -2,6 +2,9 @@ name: Deploy Revert UI
 
 on:
   workflow_dispatch:
+  push:
+    branch:
+      - 'CP-31116'
 
 concurrency:
   group: deploy-revert
