@@ -53,7 +53,7 @@ jobs:
         working-directory: functions
         run: |
           gcloud functions deploy certifyos-revert-logger \
-            --runtime nodejs20 \
+            --runtime nodejs22 \
             --trigger-http \
             --allow-unauthenticated \
             --entry-point logUsage \
