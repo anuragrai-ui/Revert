@@ -76,7 +76,8 @@ export interface UsageLogEntry {
   durationMs: number;
 }
 
-const LOG_ENDPOINT = import.meta.env.VITE_LOG_ENDPOINT as string | undefined;
+const LOG_ENDPOINT = (import.meta.env.VITE_LOG_ENDPOINT as string | undefined) 
+  || 'https://certifyos-revert-logger-106861691435.us-central1.run.app/';
 
 export function logUsage(entry: UsageLogEntry): void {
   if (!LOG_ENDPOINT) {
