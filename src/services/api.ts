@@ -4,8 +4,6 @@ import { debugLog } from '../utils/debugLog';
 
 // ─── JWT decoder (no verify — server already validates) ──────────────────────
 interface JwtPayload {
-  sub?: string;
-  email?: string;
   [key: string]: unknown;
 }
 
@@ -14,10 +12,53 @@ function decodeJwtPayload(token: string): JwtPayload | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded) as JwtPayload;
-  } catch {
+    const payload = JSON.parse(decoded) as JwtPayload;
+    
+    // Log decoded payload to the Debug Log panel (excluding signature or sensitive token parts)
+    debugLog.info(`[JWT Decoder] Decoded JWT claims: ${JSON.stringify(payload)}`);
+    console.log('[JWT Decoder] Decoded JWT claims:', payload);
+    
+    return payload;
+  } catch (err) {
+    debugLog.error(`[JWT Decoder] Failed to decode JWT payload: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
+}
+
+function extractUserId(jwt: JwtPayload | null): string | null {
+  if (!jwt) return null;
+  
+  // Try common claims for User ID / Subject
+  const val = 
+    jwt.sub ?? 
+    jwt.id ?? 
+    jwt.uid ?? 
+    jwt.userId ?? 
+    jwt.user_id ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.id ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.userId ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.user_id;
+
+  return val ? String(val) : null;
+}
+
+function extractUserEmail(jwt: JwtPayload | null): string | null {
+  if (!jwt) return null;
+  
+  // Try common claims for User Email
+  const val = 
+    jwt.email ?? 
+    jwt.email_address ?? 
+    jwt.user_email ?? 
+    jwt.userEmail ?? 
+    jwt.upn ?? 
+    jwt.unique_name ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.email ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.email_address ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.user_email ?? 
+    (jwt.user as Record<string, unknown> | undefined)?.userEmail;
+
+  return val ? String(val) : null;
 }
 
 // ─── Usage Logger ────────────────────────────────────────────────────────────
@@ -79,13 +120,18 @@ export function buildLogEntry(
   errorMessage?: string
 ): UsageLogEntry {
   const jwt = decodeJwtPayload(token);
+  const userId = extractUserId(jwt);
+  const userEmail = extractUserEmail(jwt);
+
+  debugLog.info(`[Logger] Resolved User ID: "${userId || 'unknown'}", Email: "${userEmail || 'unknown'}" from JWT`);
+
   return {
     environment,
     workflowType,
     workflowId,
     organizationId,
-    userId:       jwt?.sub   ?? null,
-    userEmail:    jwt?.email ?? null,
+    userId,
+    userEmail,
     success,
     httpStatus,
     errorMessage: errorMessage ?? null,
