@@ -46,8 +46,8 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173')
 
 const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., curl, Postman) or from allowed origins
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    // Allow requests with no origin (e.g., curl, Postman), if '*' wildcard is set, or from allowed origins
+    if (!origin || ALLOWED_ORIGINS.includes('*') || ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`Origin ${origin} not allowed by CORS`));

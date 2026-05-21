@@ -40,17 +40,31 @@ const LOG_ENDPOINT = import.meta.env.VITE_LOG_ENDPOINT as string | undefined;
 export function logUsage(entry: UsageLogEntry): void {
   if (!LOG_ENDPOINT) {
     console.debug('[Logger] VITE_LOG_ENDPOINT not set — skipping usage log');
+    debugLog.warn('[Logger] VITE_LOG_ENDPOINT not set — skipping usage log');
     return;
   }
+
+  debugLog.info(`[Logger] Sending usage log...`);
 
   // Fire-and-forget: never awaited, never blocks the UI
   fetch(LOG_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),
-  }).catch((err) => {
-    console.warn('[Logger] Failed to send usage log (non-critical):', err);
-  });
+  })
+    .then(async (res) => {
+      if (res.ok) {
+        debugLog.info('[Logger] Usage log recorded successfully.');
+      } else {
+        const text = await res.text();
+        debugLog.error(`[Logger] Log endpoint returned error ${res.status}: ${text}`);
+        console.error(`[Logger] Log endpoint returned error ${res.status}:`, text);
+      }
+    })
+    .catch((err) => {
+      debugLog.error(`[Logger] Failed to send usage log: ${err instanceof Error ? err.message : String(err)}`);
+      console.warn('[Logger] Failed to send usage log (non-critical):', err);
+    });
 }
 
 export function buildLogEntry(
