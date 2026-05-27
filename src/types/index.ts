@@ -3,6 +3,7 @@ export type Environment = 'stg' | 'production';
 export interface ApiConfig {
   tokenUrl: string;
   baseUrl: string;
+  realBaseUrl: string;
   credentialingRevert: string;
   facilityRevert: string;
 }

@@ -15,6 +15,16 @@ export default defineConfig({
         target: 'https://ng.certifyos.com/api/users/access-token',
         changeOrigin: true,
         rewrite: () => '',
+      },
+      '/api/stg': {
+        target: 'https://ng-api-stg.certifyos.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/stg/, ''),
+      },
+      '/api/prod': {
+        target: 'https://ng-api-production.certifyos.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/prod/, ''),
       }
     }
   }

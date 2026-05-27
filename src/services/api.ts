@@ -179,14 +179,16 @@ export function buildLogEntry(
 const STG_CONFIG: ApiConfig = {
   /** Same-origin path → Vite dev proxy locally, Vercel serverless `/api/users/access-token/[env].ts` in production */
   tokenUrl: '/api/users/access-token/stg',
-  baseUrl: 'https://ng-api-stg.certifyos.com',
+  baseUrl: '/api/stg',
+  realBaseUrl: 'https://ng-api-stg.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
 };
 
 const PROD_CONFIG: ApiConfig = {
   tokenUrl: '/api/users/access-token/prod',
-  baseUrl: 'https://ng-api-production.certifyos.com',
+  baseUrl: '/api/prod',
+  realBaseUrl: 'https://ng-api-production.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
 };
@@ -361,7 +363,7 @@ export function generateCurlCommand(
     ? config.credentialingRevert.replace('{id}', workflowId)
     : config.facilityRevert.replace('{id}', workflowId);
 
-  const fullUrl = `${config.baseUrl}${endpoint}`;
+  const fullUrl = `${config.realBaseUrl}${endpoint}`;
 
   return `curl -X PATCH \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{"reason": "${reason}"}'`;
 }
