@@ -29,7 +29,7 @@ function extractUserId(jwt: JwtPayload | null): string | null {
   if (!jwt) return null;
   
   // 1. Try common claims for User ID / Subject
-  let val = 
+  const val = 
     jwt.sub ?? 
     jwt.id ?? 
     jwt.uid ?? 
@@ -63,7 +63,7 @@ function extractUserEmail(jwt: JwtPayload | null): string | null {
   if (!jwt) return null;
   
   // 1. Try common claims for User Email
-  let val = 
+  const val = 
     jwt.email ?? 
     jwt.email_address ?? 
     jwt.user_email ?? 
@@ -327,7 +327,7 @@ export function parseApiError(error: AxiosError): ApiError {
   const status = error.response?.status || 0;
   const data = error.response?.data as Record<string, unknown> | undefined;
 
-  let message = 'An unexpected error occurred';
+  let message: string;
 
   switch (status) {
     case 401:
