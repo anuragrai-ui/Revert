@@ -28,8 +28,8 @@ function decodeJwtPayload(token: string): JwtPayload | null {
 function extractUserId(jwt: JwtPayload | null): string | null {
   if (!jwt) return null;
   
-  // Try common claims for User ID / Subject
-  const val = 
+  // 1. Try common claims for User ID / Subject
+  let val = 
     jwt.sub ?? 
     jwt.id ?? 
     jwt.uid ?? 
@@ -39,14 +39,31 @@ function extractUserId(jwt: JwtPayload | null): string | null {
     (jwt.user as Record<string, unknown> | undefined)?.userId ?? 
     (jwt.user as Record<string, unknown> | undefined)?.user_id;
 
-  return val ? String(val) : null;
+  if (val) return String(val);
+
+  // 2. Scan all keys for namespaced or custom user ID keys (e.g. "https://certifyos.com/user_id")
+  for (const key of Object.keys(jwt)) {
+    const lowerKey = key.toLowerCase();
+    if (
+      key.endsWith('/id') || 
+      key.endsWith('/userId') || 
+      key.endsWith('/user_id') || 
+      key.endsWith('/sub') ||
+      lowerKey === 'userid' ||
+      lowerKey === 'user_id'
+    ) {
+      return String(jwt[key]);
+    }
+  }
+
+  return null;
 }
 
 function extractUserEmail(jwt: JwtPayload | null): string | null {
   if (!jwt) return null;
   
-  // Try common claims for User Email
-  const val = 
+  // 1. Try common claims for User Email
+  let val = 
     jwt.email ?? 
     jwt.email_address ?? 
     jwt.user_email ?? 
@@ -58,7 +75,26 @@ function extractUserEmail(jwt: JwtPayload | null): string | null {
     (jwt.user as Record<string, unknown> | undefined)?.user_email ?? 
     (jwt.user as Record<string, unknown> | undefined)?.userEmail;
 
-  return val ? String(val) : null;
+  if (val) return String(val);
+
+  // 2. Scan all keys for any namespaced custom claims ending with '/email' (e.g. "https://certifyos.com/email")
+  for (const key of Object.keys(jwt)) {
+    const lowerKey = key.toLowerCase();
+    if (
+      key.endsWith('/email') || 
+      key.endsWith('/email_address') || 
+      key.endsWith('/user_email') || 
+      key.endsWith('/useremail') ||
+      lowerKey === 'email' ||
+      lowerKey === 'emailaddress' ||
+      lowerKey === 'useremail' ||
+      lowerKey === 'user_email'
+    ) {
+      return String(jwt[key]);
+    }
+  }
+
+  return null;
 }
 
 // ─── Usage Logger ────────────────────────────────────────────────────────────
