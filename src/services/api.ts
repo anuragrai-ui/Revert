@@ -183,6 +183,8 @@ const STG_CONFIG: ApiConfig = {
   realBaseUrl: 'https://ng-api-stg.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
+  credentialingGeneratePsv: '/credentialing-workflows/{id}/generate-psv',
+  facilityGeneratePsv: '/facility-credentialing-workflows/{id}/generate-psv',
 };
 
 const PROD_CONFIG: ApiConfig = {
@@ -191,6 +193,8 @@ const PROD_CONFIG: ApiConfig = {
   realBaseUrl: 'https://ng-api-production.certifyos.com',
   credentialingRevert: '/credentialing-workflows/{id}/revert-status',
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
+  credentialingGeneratePsv: '/credentialing-workflows/{id}/generate-psv',
+  facilityGeneratePsv: '/facility-credentialing-workflows/{id}/generate-psv',
 };
 
 export function getApiConfig(environment: Environment): ApiConfig {
@@ -323,6 +327,24 @@ export async function revertWorkflowStatus(
   return response.data;
 }
 
+export async function generatePsv(
+  environment: Environment,
+  token: string,
+  organizationId: string,
+  workflowId: string,
+  workflowType: 'credentialing' | 'facility'
+): Promise<unknown> {
+  const config = getApiConfig(environment);
+  const client = createApiClient(config.baseUrl, token, organizationId);
+
+  const endpoint = workflowType === 'credentialing'
+    ? config.credentialingGeneratePsv.replace('{id}', workflowId)
+    : config.facilityGeneratePsv.replace('{id}', workflowId);
+
+  const response = await client.post(endpoint, {});
+  return response.data;
+}
+
 export function parseApiError(error: AxiosError): ApiError {
   const status = error.response?.status || 0;
   const data = error.response?.data as Record<string, unknown> | undefined;
@@ -366,4 +388,21 @@ export function generateCurlCommand(
   const fullUrl = `${config.realBaseUrl}${endpoint}`;
 
   return `curl -X PATCH \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{"reason": "${reason}"}'`;
+}
+
+export function generatePsvCurlCommand(
+  environment: Environment,
+  token: string,
+  organizationId: string,
+  workflowId: string,
+  workflowType: 'credentialing' | 'facility'
+): string {
+  const config = getApiConfig(environment);
+  const endpoint = workflowType === 'credentialing'
+    ? config.credentialingGeneratePsv.replace('{id}', workflowId)
+    : config.facilityGeneratePsv.replace('{id}', workflowId);
+
+  const fullUrl = `${config.realBaseUrl}${endpoint}`;
+
+  return `curl -X POST \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{}'`;
 }

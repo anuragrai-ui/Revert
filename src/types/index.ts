@@ -1,11 +1,15 @@
 export type Environment = 'stg' | 'production';
 
+export type OperationType = 'revert' | 'generatePsv';
+
 export interface ApiConfig {
   tokenUrl: string;
   baseUrl: string;
   realBaseUrl: string;
   credentialingRevert: string;
   facilityRevert: string;
+  credentialingGeneratePsv: string;
+  facilityGeneratePsv: string;
 }
 
 export interface RevertRequest {

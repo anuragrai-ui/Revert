@@ -3,7 +3,8 @@ name: Deploy Revert UI
 on:
   workflow_dispatch:
   push:
-    branch:
+    branches:
+      - 'main'
       - 'CP-31116'
 
 concurrency:

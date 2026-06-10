@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { FileText, Moon, Sun } from 'lucide-react';
-import type { Environment } from '../types';
+import type { Environment, OperationType } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
   environment: Environment;
+  activeOperation?: OperationType;
 }
 
-export function Layout({ children, environment }: LayoutProps) {
+export function Layout({ children, environment, activeOperation = 'revert' }: LayoutProps) {
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' ||
@@ -26,9 +27,13 @@ export function Layout({ children, environment }: LayoutProps) {
     }
   }, [isDark]);
 
-  const apiDocsUrl = environment === 'production'
-    ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus'
-    : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus';
+  const apiDocsUrl = activeOperation === 'generatePsv'
+    ? (environment === 'production'
+      ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/Internal/CredentialingWorkflowsController_generatePsv'
+      : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/Internal/CredentialingWorkflowsController_generatePsv')
+    : (environment === 'production'
+      ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus'
+      : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus');
 
   return (
     <div className="min-h-screen bg-brand-ivory dark:bg-gray-900 font-sans transition-colors duration-200">
@@ -42,8 +47,8 @@ export function Layout({ children, environment }: LayoutProps) {
                 <img src={`${import.meta.env.BASE_URL}certifyos-logo-dark.png`} alt="CertifyOS" width={160} height={32} className="hidden h-8 w-auto max-w-[10rem] object-contain object-left dark:block" decoding="async" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl font-bold text-brand-midnight dark:text-white truncate sm:whitespace-normal">Workflow Revert</h1>
-                <p className="text-sm text-brand-charcoal dark:text-gray-400 max-w-xl">Credentialing &amp; Facility workflow revert</p>
+                <h1 className="text-xl font-bold text-brand-midnight dark:text-white truncate sm:whitespace-normal">Workflow Self-Service</h1>
+                <p className="text-sm text-brand-charcoal dark:text-gray-400 max-w-xl">Credentialing &amp; Facility workflow actions</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2 sm:gap-4">
