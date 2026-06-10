@@ -78,32 +78,34 @@ export function WorkflowRevertForm({
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200">
       {/* Operation Tabs */}
-      <div className="flex border-b border-brand-gray-light dark:border-gray-700 mb-6">
-        <button
-          type="button"
-          onClick={() => onOperationChange('revert')}
-          className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
-            isRevert
-              ? 'border-brand-purple text-brand-purple dark:text-purple-400'
-              : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
-          }`}
-        >
-          <Undo2 className="w-4 h-4" />
-          Revert Status
-        </button>
-        <button
-          type="button"
-          onClick={() => onOperationChange('generatePsv')}
-          className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
-            !isRevert
-              ? 'border-brand-purple text-brand-purple dark:text-purple-400'
-              : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
-          }`}
-        >
-          <RefreshCw className="w-4 h-4" />
-          Regenerate PSV PDF
-        </button>
-      </div>
+      {environment === 'production' && (
+        <div className="flex border-b border-brand-gray-light dark:border-gray-700 mb-6">
+          <button
+            type="button"
+            onClick={() => onOperationChange('revert')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
+              isRevert
+                ? 'border-brand-purple text-brand-purple dark:text-purple-400'
+                : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <Undo2 className="w-4 h-4" />
+            Revert Status
+          </button>
+          <button
+            type="button"
+            onClick={() => onOperationChange('generatePsv')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
+              !isRevert
+                ? 'border-brand-purple text-brand-purple dark:text-purple-400'
+                : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <RefreshCw className="w-4 h-4" />
+            Regenerate PSV PDF
+          </button>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold text-brand-midnight dark:text-white mb-4">
         {isRevert ? 'Revert Workflow Status' : 'Regenerate Primary Source Verification (PSV)'}

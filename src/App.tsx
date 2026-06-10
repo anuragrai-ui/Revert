@@ -48,13 +48,19 @@ function App() {
 
   const handleEnvironmentChange = useCallback((newEnv: Environment) => {
     setEnvironment(newEnv);
+    if (newEnv === 'stg') {
+      setActiveOperation('revert');
+    }
     clearAllOutputs();
   }, [clearAllOutputs]);
 
   const handleOperationChange = useCallback((newOp: OperationType) => {
+    if (environment === 'stg' && newOp === 'generatePsv') {
+      return;
+    }
     setActiveOperation(newOp);
     clearAllOutputs();
-  }, [clearAllOutputs]);
+  }, [environment, clearAllOutputs]);
 
   const handleSubmit = useCallback(async (formData: RevertFormData) => {
     if (!token) {
