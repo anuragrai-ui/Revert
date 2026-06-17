@@ -59,8 +59,8 @@ export function useAccessToken(environment: Environment): UseAccessTokenReturn {
 
   useEffect(() => {
     debugLog.info(`${TAG} env changed to "${environment}" — calling refreshToken()`);
-    refreshToken();
-  }, [refreshToken]);
+    void Promise.resolve().then(() => refreshToken());
+  }, [environment, refreshToken]);
 
   return {
     token,

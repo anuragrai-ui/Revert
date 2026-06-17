@@ -2,6 +2,7 @@ import * as ff from '@google-cloud/functions-framework';
 import { BigQuery } from '@google-cloud/bigquery';
 import cors from 'cors';
 import { IncomingMessage, ServerResponse } from 'http';
+import { getCredentialingWorkflowProviderDetails } from './providerLookup';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ const corsMiddleware = cors({
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
-  methods: ['POST', 'OPTIONS'],
+  methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 });
 
@@ -83,6 +84,30 @@ ff.http('logUsage', async (req: ff.Request, res: ff.Response) => {
   // Preflight
   if (req.method === 'OPTIONS') {
     res.status(204).send('');
+    return;
+  }
+
+  // Handle Provider Lookup (GET)
+  if (req.method === 'GET') {
+    const workflowId = req.query.workflowId as string | undefined;
+    const organizationId = req.query.organizationId as string | undefined;
+
+    if (!workflowId || !organizationId) {
+      res.status(400).json({ error: 'Missing query parameters: workflowId, organizationId' });
+      return;
+    }
+
+    try {
+      const details = await getCredentialingWorkflowProviderDetails(bigquery, workflowId, organizationId);
+      if (!details) {
+        res.status(404).json({ error: 'Provider details not found for the given workflow and organization' });
+        return;
+      }
+      res.status(200).json(details);
+    } catch (err: any) {
+      console.error('[Provider Lookup] BigQuery query error:', err);
+      res.status(500).json({ error: `Failed to query BigQuery: ${err?.message || err}` });
+    }
     return;
   }
 

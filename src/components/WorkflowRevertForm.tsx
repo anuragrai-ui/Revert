@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { WorkflowType, RevertFormData, Environment, OperationType } from '../types';
-import { Building2, User, Send, AlertTriangle, Undo2, RefreshCw, HelpCircle } from 'lucide-react';
+import { Building2, User, Send, AlertTriangle, Undo2, RefreshCw, HelpCircle, UserCheck, Search, CheckCircle2, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { useProviderLookup } from '../hooks/useProviderLookup';
 
 interface WorkflowRevertFormProps {
   onSubmit: (data: RevertFormData) => void;
@@ -40,15 +41,22 @@ export function WorkflowRevertForm({
     organizationId: localStorage.getItem('organizationId') || '',
     reason: '',
     workflowType: 'credentialing',
+    providerIds: '',
   });
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  const {
+    isLoading: isLookupLoading,
+    error: lookupError,
+    providerDetails,
+    lookupProvider,
+    clearDetails: clearLookupDetails,
+  } = useProviderLookup();
+
+  // Clear lookup details when the operation changes
   useEffect(() => {
-    const savedOrgId = localStorage.getItem('organizationId');
-    if (savedOrgId) {
-      setFormData(prev => ({ ...prev, organizationId: savedOrgId }));
-    }
-  }, []);
+    clearLookupDetails();
+  }, [activeOperation, clearLookupDetails]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,19 +75,25 @@ export function WorkflowRevertForm({
 
   const updateField = <K extends keyof RevertFormData>(field: K, value: RevertFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'workflowId' || field === 'organizationId') {
+      clearLookupDetails();
+    }
   };
 
   const isRevert = activeOperation === 'revert';
+  const isGeneratePsv = activeOperation === 'generatePsv';
+  const isMarkDelegated = activeOperation === 'markDelegated';
 
   const isValid = isRevert
     ? (formData.workflowId.trim() && formData.organizationId.trim() && formData.reason.trim())
-    : (formData.workflowId.trim() && formData.organizationId.trim());
+    : isGeneratePsv
+      ? (formData.workflowId.trim() && formData.organizationId.trim())
+      : (formData.providerIds.trim() && formData.organizationId.trim() && formData.reason.trim());
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200">
       {/* Operation Tabs */}
-      {environment === 'production' && (
-        <div className="flex border-b border-brand-gray-light dark:border-gray-700 mb-6">
+      <div className="flex flex-wrap border-b border-brand-gray-light dark:border-gray-700 mb-6">
           <button
             type="button"
             onClick={() => onOperationChange('revert')}
@@ -92,23 +106,40 @@ export function WorkflowRevertForm({
             <Undo2 className="w-4 h-4" />
             Revert Status
           </button>
+          {environment === 'production' && (
+            <button
+              type="button"
+              onClick={() => onOperationChange('generatePsv')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
+                isGeneratePsv
+                  ? 'border-brand-purple text-brand-purple dark:text-purple-400'
+                  : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Regenerate PSV PDF
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => onOperationChange('generatePsv')}
+            onClick={() => onOperationChange('markDelegated')}
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all ${
-              !isRevert
+              isMarkDelegated
                 ? 'border-brand-purple text-brand-purple dark:text-purple-400'
                 : 'border-transparent text-brand-gray hover:text-brand-charcoal dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
-            <RefreshCw className="w-4 h-4" />
-            Regenerate PSV PDF
+            <UserCheck className="w-4 h-4" />
+            Mark Delegated
           </button>
-        </div>
-      )}
+      </div>
 
       <h2 className="text-lg font-semibold text-brand-midnight dark:text-white mb-4">
-        {isRevert ? 'Revert Workflow Status' : 'Regenerate Primary Source Verification (PSV)'}
+        {isRevert
+          ? 'Revert Workflow Status'
+          : isGeneratePsv
+            ? 'Regenerate Primary Source Verification (PSV)'
+            : 'Mark Providers as Delegated'}
       </h2>
 
       {/* Info Boxes based on Operation */}
@@ -127,7 +158,7 @@ export function WorkflowRevertForm({
             </div>
           </div>
         </div>
-      ) : (
+      ) : isGeneratePsv ? (
         <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-lg">
           <div className="flex items-start gap-3">
             <HelpCircle className="w-5 h-5 text-brand-purple dark:text-purple-400 flex-shrink-0 mt-0.5" />
@@ -141,9 +172,24 @@ export function WorkflowRevertForm({
             </div>
           </div>
         </div>
+      ) : (
+        <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">
+              <p className="font-medium mb-1">Important Delegation Notes:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Sets <code>businessPurpose.isForCredentialing</code> to <code>false</code>.</li>
+                <li>Applies only to edit-providers and organization-providers records.</li>
+                <li>Enter one or more provider IDs separated by commas or new lines.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!isMarkDelegated && (
         <div>
           <label className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-2">Workflow Type</label>
           <div className="grid grid-cols-2 gap-4">
@@ -165,8 +211,10 @@ export function WorkflowRevertForm({
             ))}
           </div>
         </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${isMarkDelegated ? '' : 'md:grid-cols-2'}`}>
+          {!isMarkDelegated && (
           <div>
             <label htmlFor="workflowId" className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-1">
               Workflow ID <span className="text-red-500">*</span>
@@ -181,6 +229,7 @@ export function WorkflowRevertForm({
               required
             />
           </div>
+          )}
 
           <div>
             <label htmlFor="organizationId" className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-1">
@@ -199,16 +248,109 @@ export function WorkflowRevertForm({
           </div>
         </div>
 
-        {isRevert && (
+        {!isMarkDelegated && (
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
+                <Search className="w-4 h-4 text-brand-purple" />
+                Provider Details Verification
+              </h3>
+              {formData.workflowId.trim() && formData.organizationId.trim() && !providerDetails && !isLookupLoading && (
+                <button
+                  type="button"
+                  onClick={() => lookupProvider(formData.workflowId, formData.organizationId)}
+                  className="px-3 py-1.5 text-xs font-medium bg-brand-purple text-white rounded-md hover:bg-brand-purple-dark transition-colors cursor-pointer"
+                >
+                  Verify from BigQuery
+                </button>
+              )}
+            </div>
+
+            {isLookupLoading && (
+              <div className="flex items-center gap-2 text-sm text-brand-gray dark:text-gray-400 py-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-brand-purple" />
+                <span>Querying BigQuery database...</span>
+              </div>
+            )}
+
+            {lookupError && (
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 py-1">
+                <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{lookupError}</span>
+              </div>
+            )}
+
+            {providerDetails && (
+              <div className="space-y-2 border-t border-brand-gray-light dark:border-gray-800 pt-3 mt-2 text-sm">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium mb-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Details Verified Successfully:</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-brand-charcoal dark:text-gray-300">
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">Provider Name</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white">
+                      {providerDetails.provider_first_name} {providerDetails.provider_last_name}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">NPI Number</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white font-mono">
+                      {providerDetails.provider_npi || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700 sm:col-span-2">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">Workflow Name</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white">
+                      {providerDetails.workflow_name || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!formData.workflowId.trim() || !formData.organizationId.trim() ? (
+              <p className="text-xs text-brand-gray dark:text-gray-500">
+                Enter both Workflow ID and Organization ID above to enable provider details verification.
+              </p>
+            ) : !providerDetails && !isLookupLoading && !lookupError ? (
+              <p className="text-xs text-brand-gray dark:text-gray-400">
+                Please verify details before proceeding to ensure accuracy.
+              </p>
+            ) : null}
+          </div>
+        )}
+
+        {isMarkDelegated && (
+          <div>
+            <label htmlFor="providerIds" className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-1">
+              Provider IDs <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="providerIds"
+              value={formData.providerIds}
+              onChange={(e) => updateField('providerIds', e.target.value)}
+              placeholder={"provider-id-1\nprovider-id-2"}
+              rows={5}
+              className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 text-brand-midnight dark:text-white rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-brand-purple outline-none resize-y"
+              required
+            />
+            <p className="text-xs text-brand-gray dark:text-gray-400 mt-1">
+              Paste IDs on separate lines or separated by commas
+            </p>
+          </div>
+        )}
+
+        {(isRevert || isMarkDelegated) && (
           <div>
             <label htmlFor="reason" className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-1">
-              Reason for Revert <span className="text-red-500">*</span>
+              {isRevert ? 'Reason for Revert' : 'Reason for Delegation'} <span className="text-red-500">*</span>
             </label>
             <textarea
               id="reason"
               value={formData.reason}
               onChange={(e) => updateField('reason', e.target.value)}
-              placeholder="e.g., TS-12345 — reverting to previous status per client request"
+              placeholder={isRevert ? 'e.g., TS-12345 - reverting to previous status per client request' : 'e.g., TS-12345 - marking providers as delegated per client request'}
               rows={3}
               className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 text-brand-midnight dark:text-white rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-brand-purple outline-none resize-none"
               required
@@ -225,11 +367,17 @@ export function WorkflowRevertForm({
           className={`w-full flex items-center justify-center gap-2 px-6 py-3 font-medium rounded-lg disabled:opacity-50 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors ${
             isRevert
               ? 'bg-brand-yellow hover:bg-brand-yellow-hover text-black'
-              : 'bg-brand-purple hover:bg-brand-purple-dark text-white'
+              : isGeneratePsv
+                ? 'bg-brand-purple hover:bg-brand-purple-dark text-white'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
           }`}
         >
-          {isRevert ? <Send className="w-5 h-5" /> : <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />}
-          {isLoading ? 'Processing...' : (isRevert ? 'Revert Status' : 'Regenerate PSV')}
+          {isRevert
+            ? <Send className="w-5 h-5" />
+            : isGeneratePsv
+              ? <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+              : <UserCheck className="w-5 h-5" />}
+          {isLoading ? 'Processing...' : (isRevert ? 'Revert Status' : isGeneratePsv ? 'Regenerate PSV' : 'Mark as Delegated')}
         </button>
 
         {!hasToken && (
@@ -248,6 +396,7 @@ export function WorkflowRevertForm({
           onCancel={handleCancel}
           isLoading={isLoading}
           operation={activeOperation}
+          providerDetails={providerDetails}
         />
       )}
     </div>
