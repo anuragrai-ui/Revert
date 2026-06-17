@@ -31,9 +31,13 @@ export function Layout({ children, environment, activeOperation = 'revert' }: La
     ? (environment === 'production'
       ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/Internal/CredentialingWorkflowsController_generatePsv'
       : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/Internal/CredentialingWorkflowsController_generatePsv')
-    : (environment === 'production'
-      ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus'
-      : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus');
+    : activeOperation === 'markDelegated'
+      ? (environment === 'production'
+        ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/Internal/ProvidersController_markAsDelegated'
+        : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/Internal/ProvidersController_markAsDelegated')
+      : (environment === 'production'
+        ? 'https://ng-api-production.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus'
+        : 'https://ng-api-stg.certifyos.com/api/certifyos-dev/#/credentialing-workflows/CredentialingWorkflowsController_revertStatus');
 
   return (
     <div className="min-h-screen bg-brand-ivory dark:bg-gray-900 font-sans transition-colors duration-200">

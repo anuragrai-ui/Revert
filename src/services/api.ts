@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import type { Environment, ApiConfig, RevertRequest, AccessTokenResponse, ApiError } from '../types';
+import type { Environment, ApiConfig, RevertRequest, MarkProvidersDelegatedRequest, AccessTokenResponse, ApiError } from '../types';
 import { debugLog } from '../utils/debugLog';
 
 // ─── JWT decoder (no verify — server already validates) ──────────────────────
@@ -185,6 +185,7 @@ const STG_CONFIG: ApiConfig = {
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
   credentialingGeneratePsv: '/credentialing-workflows/{id}/generate-psv',
   facilityGeneratePsv: '/facility-credentialing-workflows/{id}/generate-psv',
+  markProvidersDelegated: '/providers/mark-as-delegated',
 };
 
 const PROD_CONFIG: ApiConfig = {
@@ -195,6 +196,7 @@ const PROD_CONFIG: ApiConfig = {
   facilityRevert: '/facility-credentialing-workflows/{id}/revert-status',
   credentialingGeneratePsv: '/credentialing-workflows/{id}/generate-psv',
   facilityGeneratePsv: '/facility-credentialing-workflows/{id}/generate-psv',
+  markProvidersDelegated: '/providers/mark-as-delegated',
 };
 
 export function getApiConfig(environment: Environment): ApiConfig {
@@ -345,6 +347,25 @@ export async function generatePsv(
   return response.data;
 }
 
+export async function markProvidersDelegated(
+  environment: Environment,
+  token: string,
+  organizationId: string,
+  providerIds: string[],
+  reason: string
+): Promise<unknown> {
+  const config = getApiConfig(environment);
+  const client = createApiClient(config.baseUrl, token, organizationId);
+
+  const requestBody: MarkProvidersDelegatedRequest = {
+    providerIds,
+    reason,
+  };
+
+  const response = await client.patch(config.markProvidersDelegated, requestBody);
+  return response.data;
+}
+
 export function parseApiError(error: AxiosError): ApiError {
   const status = error.response?.status || 0;
   const data = error.response?.data as Record<string, unknown> | undefined;
@@ -405,4 +426,21 @@ export function generatePsvCurlCommand(
   const fullUrl = `${config.realBaseUrl}${endpoint}`;
 
   return `curl -X POST \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{}'`;
+}
+
+export function generateMarkProvidersDelegatedCurlCommand(
+  environment: Environment,
+  token: string,
+  organizationId: string,
+  providerIds: string[],
+  reason: string
+): string {
+  const config = getApiConfig(environment);
+  const fullUrl = `${config.realBaseUrl}${config.markProvidersDelegated}`;
+  const requestBody: MarkProvidersDelegatedRequest = {
+    providerIds,
+    reason,
+  };
+
+  return `curl -X PATCH \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify(requestBody)}'`;
 }

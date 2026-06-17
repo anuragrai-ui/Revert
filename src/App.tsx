@@ -8,8 +8,16 @@ import { ResponseDisplay } from './components/ResponseDisplay';
 import { useAccessToken } from './hooks/useAccessToken';
 import { useWorkflowRevert } from './hooks/useWorkflowRevert';
 import { usePsvGeneration } from './hooks/usePsvGeneration';
+import { useMarkProvidersDelegated } from './hooks/useMarkProvidersDelegated';
 import { useTokenFromHash } from './hooks/useTokenFromHash';
-import { generateCurlCommand, generatePsvCurlCommand } from './services/api';
+import { generateCurlCommand, generatePsvCurlCommand, generateMarkProvidersDelegatedCurlCommand } from './services/api';
+
+function parseProviderIds(providerIds: string): string[] {
+  return providerIds
+    .split(/[\n,]+/)
+    .map((providerId) => providerId.trim())
+    .filter(Boolean);
+}
 
 function App() {
   const [environment, setEnvironment] = useState<Environment>('stg');
@@ -38,21 +46,39 @@ function App() {
     clearResponse: clearPsvResponse,
   } = usePsvGeneration(environment);
 
+  const {
+    isLoading: isMarkDelegatedLoading,
+    error: markDelegatedError,
+    response: markDelegatedResponse,
+    markDelegated,
+    clearError: clearMarkDelegatedError,
+    clearResponse: clearMarkDelegatedResponse,
+  } = useMarkProvidersDelegated(environment);
+
   const clearAllOutputs = useCallback(() => {
     clearRevertError();
     clearRevertResponse();
     clearPsvError();
     clearPsvResponse();
+    clearMarkDelegatedError();
+    clearMarkDelegatedResponse();
     setCurlCommand('');
-  }, [clearRevertError, clearRevertResponse, clearPsvError, clearPsvResponse]);
+  }, [
+    clearRevertError,
+    clearRevertResponse,
+    clearPsvError,
+    clearPsvResponse,
+    clearMarkDelegatedError,
+    clearMarkDelegatedResponse,
+  ]);
 
   const handleEnvironmentChange = useCallback((newEnv: Environment) => {
     setEnvironment(newEnv);
-    if (newEnv === 'stg') {
+    if (newEnv === 'stg' && activeOperation === 'generatePsv') {
       setActiveOperation('revert');
     }
     clearAllOutputs();
-  }, [clearAllOutputs]);
+  }, [activeOperation, clearAllOutputs]);
 
   const handleOperationChange = useCallback((newOp: OperationType) => {
     if (environment === 'stg' && newOp === 'generatePsv') {
@@ -85,7 +111,10 @@ function App() {
         formData.workflowType,
         formData.reason
       );
-    } else {
+      return;
+    }
+
+    if (activeOperation === 'generatePsv') {
       const curl = generatePsvCurlCommand(
         environment,
         token,
@@ -101,8 +130,44 @@ function App() {
         formData.workflowId,
         formData.workflowType
       );
+      return;
     }
-  }, [environment, token, activeOperation, revertWorkflow, generatePsvPdf]);
+
+    const providerIds = parseProviderIds(formData.providerIds);
+    const curl = generateMarkProvidersDelegatedCurlCommand(
+      environment,
+      token,
+      formData.organizationId,
+      providerIds,
+      formData.reason
+    );
+    setCurlCommand(curl);
+
+    await markDelegated(
+      token,
+      formData.organizationId,
+      providerIds,
+      formData.reason
+    );
+  }, [environment, token, activeOperation, revertWorkflow, generatePsvPdf, markDelegated]);
+
+  const isLoading = activeOperation === 'revert'
+    ? isRevertLoading
+    : activeOperation === 'generatePsv'
+      ? isPsvLoading
+      : isMarkDelegatedLoading;
+
+  const response = activeOperation === 'revert'
+    ? revertResponse
+    : activeOperation === 'generatePsv'
+      ? psvResponse
+      : markDelegatedResponse;
+
+  const error = activeOperation === 'revert'
+    ? revertError
+    : activeOperation === 'generatePsv'
+      ? psvError
+      : markDelegatedError;
 
   return (
     <Layout environment={environment} activeOperation={activeOperation}>
@@ -120,7 +185,7 @@ function App() {
 
       <WorkflowRevertForm
         onSubmit={handleSubmit}
-        isLoading={activeOperation === 'revert' ? isRevertLoading : isPsvLoading}
+        isLoading={isLoading}
         hasToken={!!token}
         environment={environment}
         activeOperation={activeOperation}
@@ -128,8 +193,8 @@ function App() {
       />
 
       <ResponseDisplay
-        response={activeOperation === 'revert' ? revertResponse : psvResponse}
-        error={activeOperation === 'revert' ? revertError : psvError}
+        response={response}
+        error={error}
         curlCommand={curlCommand}
       />
     </Layout>

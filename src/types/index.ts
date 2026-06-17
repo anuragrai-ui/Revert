@@ -1,6 +1,6 @@
 export type Environment = 'stg' | 'production';
 
-export type OperationType = 'revert' | 'generatePsv';
+export type OperationType = 'revert' | 'generatePsv' | 'markDelegated';
 
 export interface ApiConfig {
   tokenUrl: string;
@@ -10,9 +10,15 @@ export interface ApiConfig {
   facilityRevert: string;
   credentialingGeneratePsv: string;
   facilityGeneratePsv: string;
+  markProvidersDelegated: string;
 }
 
 export interface RevertRequest {
+  reason: string;
+}
+
+export interface MarkProvidersDelegatedRequest {
+  providerIds: string[];
   reason: string;
 }
 
@@ -39,4 +45,5 @@ export interface RevertFormData {
   organizationId: string;
   reason: string;
   workflowType: WorkflowType;
+  providerIds: string;
 }
