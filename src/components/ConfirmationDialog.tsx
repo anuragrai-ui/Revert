@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { RevertFormData, WorkflowType, OperationType } from '../types';
-import { AlertTriangle, X, CheckCircle, Building2, User, Shield, RefreshCw, UserCheck } from 'lucide-react';
+import type { RevertFormData, WorkflowType, OperationType, ProviderDetails } from '../types';
+import { AlertTriangle, X, CheckCircle, Building2, User, Shield, RefreshCw, UserCheck, CheckCircle2 } from 'lucide-react';
 
 interface ConfirmationDialogProps {
   formData: RevertFormData;
@@ -9,6 +9,7 @@ interface ConfirmationDialogProps {
   onCancel: () => void;
   isLoading: boolean;
   operation?: OperationType;
+  providerDetails?: ProviderDetails | null;
 }
 
 const WORKFLOW_TYPE_LABELS: Record<WorkflowType, string> = {
@@ -35,6 +36,7 @@ export function ConfirmationDialog({
   onCancel,
   isLoading,
   operation = 'revert',
+  providerDetails,
 }: ConfirmationDialogProps) {
   const [confirmed, setConfirmed] = useState(false);
 
@@ -183,6 +185,23 @@ export function ConfirmationDialog({
                   </p>
                   <p className="font-medium text-brand-midnight dark:text-white font-mono text-sm break-all">
                     {providerIds.join(', ')}
+                  </p>
+                </div>
+              )}
+
+              {providerDetails && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-lg">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase font-semibold mb-1 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Verified Provider Details
+                  </p>
+                  <p className="font-semibold text-brand-midnight dark:text-white text-base">
+                    {providerDetails.provider_first_name} {providerDetails.provider_last_name}
+                  </p>
+                  <p className="text-xs text-brand-gray dark:text-gray-400 mt-1">
+                    NPI: <span className="font-mono font-medium">{providerDetails.provider_npi || 'N/A'}</span>
+                  </p>
+                  <p className="text-xs text-brand-gray dark:text-gray-400">
+                    Workflow: <span className="font-medium">{providerDetails.workflow_name || 'N/A'}</span>
                   </p>
                 </div>
               )}

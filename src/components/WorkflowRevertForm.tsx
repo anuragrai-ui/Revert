@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { WorkflowType, RevertFormData, Environment, OperationType } from '../types';
-import { Building2, User, Send, AlertTriangle, Undo2, RefreshCw, HelpCircle, UserCheck } from 'lucide-react';
+import { Building2, User, Send, AlertTriangle, Undo2, RefreshCw, HelpCircle, UserCheck, Search, CheckCircle2, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { useProviderLookup } from '../hooks/useProviderLookup';
 
 interface WorkflowRevertFormProps {
   onSubmit: (data: RevertFormData) => void;
@@ -44,6 +45,19 @@ export function WorkflowRevertForm({
   });
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  const {
+    isLoading: isLookupLoading,
+    error: lookupError,
+    providerDetails,
+    lookupProvider,
+    clearDetails: clearLookupDetails,
+  } = useProviderLookup();
+
+  // Clear lookup details when the operation changes
+  useEffect(() => {
+    clearLookupDetails();
+  }, [activeOperation, clearLookupDetails]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('organizationId', formData.organizationId);
@@ -61,6 +75,9 @@ export function WorkflowRevertForm({
 
   const updateField = <K extends keyof RevertFormData>(field: K, value: RevertFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'workflowId' || field === 'organizationId') {
+      clearLookupDetails();
+    }
   };
 
   const isRevert = activeOperation === 'revert';
@@ -231,6 +248,79 @@ export function WorkflowRevertForm({
           </div>
         </div>
 
+        {!isMarkDelegated && (
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border border-brand-gray-light dark:border-gray-700 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-brand-midnight dark:text-white flex items-center gap-2">
+                <Search className="w-4 h-4 text-brand-purple" />
+                Provider Details Verification
+              </h3>
+              {formData.workflowId.trim() && formData.organizationId.trim() && !providerDetails && !isLookupLoading && (
+                <button
+                  type="button"
+                  onClick={() => lookupProvider(formData.workflowId, formData.organizationId)}
+                  className="px-3 py-1.5 text-xs font-medium bg-brand-purple text-white rounded-md hover:bg-brand-purple-dark transition-colors cursor-pointer"
+                >
+                  Verify from BigQuery
+                </button>
+              )}
+            </div>
+
+            {isLookupLoading && (
+              <div className="flex items-center gap-2 text-sm text-brand-gray dark:text-gray-400 py-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-brand-purple" />
+                <span>Querying BigQuery database...</span>
+              </div>
+            )}
+
+            {lookupError && (
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 py-1">
+                <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{lookupError}</span>
+              </div>
+            )}
+
+            {providerDetails && (
+              <div className="space-y-2 border-t border-brand-gray-light dark:border-gray-800 pt-3 mt-2 text-sm">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium mb-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Details Verified Successfully:</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-brand-charcoal dark:text-gray-300">
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">Provider Name</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white">
+                      {providerDetails.provider_first_name} {providerDetails.provider_last_name}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">NPI Number</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white font-mono">
+                      {providerDetails.provider_npi || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="bg-white dark:bg-gray-950 p-2.5 rounded border border-brand-gray-light dark:border-gray-700 sm:col-span-2">
+                    <span className="text-xs text-brand-gray dark:text-gray-500 block">Workflow Name</span>
+                    <span className="font-semibold text-brand-midnight dark:text-white">
+                      {providerDetails.workflow_name || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!formData.workflowId.trim() || !formData.organizationId.trim() ? (
+              <p className="text-xs text-brand-gray dark:text-gray-500">
+                Enter both Workflow ID and Organization ID above to enable provider details verification.
+              </p>
+            ) : !providerDetails && !isLookupLoading && !lookupError ? (
+              <p className="text-xs text-brand-gray dark:text-gray-400">
+                Please verify details before proceeding to ensure accuracy.
+              </p>
+            ) : null}
+          </div>
+        )}
+
         {isMarkDelegated && (
           <div>
             <label htmlFor="providerIds" className="block text-sm font-medium text-brand-charcoal dark:text-gray-300 mb-1">
@@ -306,6 +396,7 @@ export function WorkflowRevertForm({
           onCancel={handleCancel}
           isLoading={isLoading}
           operation={activeOperation}
+          providerDetails={providerDetails}
         />
       )}
     </div>

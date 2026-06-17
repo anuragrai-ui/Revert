@@ -47,3 +47,12 @@ export interface RevertFormData {
   workflowType: WorkflowType;
   providerIds: string;
 }
+
+export interface ProviderDetails {
+  credentialing_workflows_id: string;
+  organization_id: string;
+  workflow_name: string | null;
+  provider_first_name: string | null;
+  provider_last_name: string | null;
+  provider_npi: string | null;
+}

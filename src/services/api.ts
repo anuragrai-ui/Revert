@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import type { Environment, ApiConfig, RevertRequest, MarkProvidersDelegatedRequest, AccessTokenResponse, ApiError } from '../types';
+import type { Environment, ApiConfig, RevertRequest, MarkProvidersDelegatedRequest, AccessTokenResponse, ApiError, ProviderDetails } from '../types';
 import { debugLog } from '../utils/debugLog';
 
 // ─── JWT decoder (no verify — server already validates) ──────────────────────
@@ -443,4 +443,40 @@ export function generateMarkProvidersDelegatedCurlCommand(
   };
 
   return `curl -X PATCH \\\n  '${fullUrl}' \\\n  -H 'Authorization: Bearer ${token}' \\\n  -H 'organization-id: ${organizationId}' \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify(requestBody)}'`;
+}
+
+export async function fetchProviderDetails(
+  workflowId: string,
+  organizationId: string
+): Promise<ProviderDetails | null> {
+  if (!LOG_ENDPOINT) {
+    console.debug('[Provider Lookup] LOG_ENDPOINT not set — skipping lookup');
+    return null;
+  }
+
+  // Support local development if VITE_LOG_ENDPOINT is a local URL (or defaults to local 8082 if testing locally)
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const endpoint = isLocalhost ? 'http://localhost:8082/' : LOG_ENDPOINT;
+
+  const url = `${endpoint.endsWith('/') ? endpoint : endpoint + '/'}?workflowId=${encodeURIComponent(workflowId)}&organizationId=${encodeURIComponent(organizationId)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        return null;
+      }
+      const text = await res.text();
+      throw new Error(`Lookup returned status ${res.status}: ${text}`);
+    }
+
+    return await res.json() as ProviderDetails;
+  } catch (err) {
+    console.warn('[Provider Lookup] Failed to fetch provider details:', err);
+    throw err;
+  }
 }
