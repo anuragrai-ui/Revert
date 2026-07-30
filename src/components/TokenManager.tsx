@@ -8,6 +8,7 @@ interface TokenManagerProps {
   token: string | null;
   error: string | null;
   onManualToken: (token: string) => void;
+  onClearToken: () => void;
 }
 
 export function TokenManager({
@@ -15,6 +16,7 @@ export function TokenManager({
   token,
   error,
   onManualToken,
+  onClearToken,
 }: TokenManagerProps) {
   const [pasteValue, setPasteValue] = useState('');
 
@@ -100,15 +102,24 @@ export function TokenManager({
       {/* Token status */}
       {token ? (
         <div className="p-4 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
-            <span className="font-medium text-green-700 dark:text-green-400">Token Active</span>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
+              <span className="font-medium text-green-700 dark:text-green-400">Token Active</span>
+            </div>
+            <button
+              onClick={onClearToken}
+              className="text-xs font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 underline decoration-transparent hover:decoration-green-700"
+              title="Clear the cached token and fetch a new one"
+            >
+              Clear Token
+            </button>
           </div>
           <div className="font-mono text-sm text-green-800 dark:text-green-300 bg-green-100 dark:bg-green-900/50 p-2 rounded break-all">
             {getTokenPreview(token)}
           </div>
           <p className="text-xs text-green-600 dark:text-green-500 mt-2">
-            Token is valid for 24 hours. Refresh if you encounter authentication errors.
+            Cached in your browser and valid for 24 hours — it'll survive a page refresh. Clear it if you encounter authentication errors.
           </p>
         </div>
       ) : !error && (

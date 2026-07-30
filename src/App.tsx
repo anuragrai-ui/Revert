@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Environment, RevertFormData, OperationType } from './types';
 import { Layout } from './components/Layout';
 import { EnvironmentSelector } from './components/EnvironmentSelector';
@@ -24,7 +24,7 @@ function App() {
   const [activeOperation, setActiveOperation] = useState<OperationType>('revert');
   const [curlCommand, setCurlCommand] = useState<string>('');
 
-  const { token, error: tokenError, setManualToken } = useAccessToken(environment);
+  const { token, error: tokenError, setManualToken, clearToken } = useAccessToken(environment);
 
   useTokenFromHash(setManualToken);
 
@@ -32,6 +32,7 @@ function App() {
     isLoading: isRevertLoading,
     error: revertError,
     response: revertResponse,
+    durationMs: revertDurationMs,
     revertWorkflow,
     clearError: clearRevertError,
     clearResponse: clearRevertResponse,
@@ -41,6 +42,7 @@ function App() {
     isLoading: isPsvLoading,
     error: psvError,
     response: psvResponse,
+    durationMs: psvDurationMs,
     generatePsvPdf,
     clearError: clearPsvError,
     clearResponse: clearPsvResponse,
@@ -50,10 +52,20 @@ function App() {
     isLoading: isMarkDelegatedLoading,
     error: markDelegatedError,
     response: markDelegatedResponse,
+    durationMs: markDelegatedDurationMs,
     markDelegated,
     clearError: clearMarkDelegatedError,
     clearResponse: clearMarkDelegatedResponse,
   } = useMarkProvidersDelegated(environment);
+
+  // A 401 means the cached token is no longer accepted — drop it so the
+  // next attempt fetches (or prompts for) a fresh one instead of retrying
+  // the same stale token.
+  useEffect(() => {
+    if (revertError?.status === 401 || psvError?.status === 401 || markDelegatedError?.status === 401) {
+      clearToken();
+    }
+  }, [revertError, psvError, markDelegatedError, clearToken]);
 
   const clearAllOutputs = useCallback(() => {
     clearRevertError();
@@ -169,6 +181,12 @@ function App() {
       ? psvError
       : markDelegatedError;
 
+  const durationMs = activeOperation === 'revert'
+    ? revertDurationMs
+    : activeOperation === 'generatePsv'
+      ? psvDurationMs
+      : markDelegatedDurationMs;
+
   return (
     <Layout environment={environment} activeOperation={activeOperation}>
       <EnvironmentSelector
@@ -181,6 +199,7 @@ function App() {
         token={token}
         error={tokenError}
         onManualToken={setManualToken}
+        onClearToken={clearToken}
       />
 
       <WorkflowRevertForm
@@ -195,6 +214,7 @@ function App() {
       <ResponseDisplay
         response={response}
         error={error}
+        durationMs={durationMs}
         curlCommand={curlCommand}
       />
     </Layout>

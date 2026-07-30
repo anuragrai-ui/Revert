@@ -7,6 +7,7 @@ interface UseWorkflowRevertReturn {
   isLoading: boolean;
   error: ApiError | null;
   response: unknown | null;
+  durationMs: number | null;
   revertWorkflow: (
     token: string,
     organizationId: string,
@@ -22,6 +23,7 @@ export function useWorkflowRevert(environment: Environment): UseWorkflowRevertRe
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [response, setResponse] = useState<unknown | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
   const revertWorkflow = useCallback(async (
     token: string,
@@ -33,6 +35,7 @@ export function useWorkflowRevert(environment: Environment): UseWorkflowRevertRe
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setDurationMs(null);
 
     const startTime = Date.now();
 
@@ -45,27 +48,29 @@ export function useWorkflowRevert(environment: Environment): UseWorkflowRevertRe
         workflowType,
         reason
       );
-      const durationMs = Date.now() - startTime;
+      const elapsed = Date.now() - startTime;
 
       setResponse(result);
+      setDurationMs(elapsed);
 
       // Fire-and-forget usage log — success
       logUsage(buildLogEntry(
         token, environment, workflowType, workflowId, organizationId,
-        true, 200, durationMs
+        true, 200, elapsed
       ));
     } catch (err) {
-      const durationMs = Date.now() - startTime;
+      const elapsed = Date.now() - startTime;
       const axiosError = err as AxiosError;
       const parsedError = parseApiError(axiosError);
       setError(parsedError);
+      setDurationMs(elapsed);
 
       // Fire-and-forget usage log — failure
       logUsage(buildLogEntry(
         token, environment, workflowType, workflowId, organizationId,
         false,
         axiosError.response?.status ?? 0,
-        durationMs,
+        elapsed,
         parsedError.message
       ));
     } finally {
@@ -85,6 +90,7 @@ export function useWorkflowRevert(environment: Environment): UseWorkflowRevertRe
     isLoading,
     error,
     response,
+    durationMs,
     revertWorkflow,
     clearError,
     clearResponse,

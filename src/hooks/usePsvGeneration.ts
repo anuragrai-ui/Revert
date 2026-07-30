@@ -8,6 +8,7 @@ interface UsePsvGenerationReturn {
   isLoading: boolean;
   error: ApiError | null;
   response: unknown | null;
+  durationMs: number | null;
   generatePsvPdf: (
     token: string,
     organizationId: string,
@@ -22,6 +23,7 @@ export function usePsvGeneration(environment: Environment): UsePsvGenerationRetu
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [response, setResponse] = useState<unknown | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
   const generatePsvPdf = useCallback(async (
     token: string,
@@ -32,9 +34,12 @@ export function usePsvGeneration(environment: Environment): UsePsvGenerationRetu
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setDurationMs(null);
 
     const TAG = '[usePsvGeneration]';
     debugLog.info(`${TAG} Starting PSV generation: env=${environment}, type=${workflowType}, id=${workflowId}, org=${organizationId}`);
+
+    const startTime = Date.now();
 
     try {
       const result = await generatePsv(
@@ -46,11 +51,13 @@ export function usePsvGeneration(environment: Environment): UsePsvGenerationRetu
       );
 
       setResponse(result);
+      setDurationMs(Date.now() - startTime);
       debugLog.info(`${TAG} PSV generation successfully triggered (202 Accepted).`);
     } catch (err) {
       const axiosError = err as AxiosError;
       const parsedError = parseApiError(axiosError);
       setError(parsedError);
+      setDurationMs(Date.now() - startTime);
       debugLog.error(`${TAG} PSV generation failed: ${parsedError.message}`);
     } finally {
       setIsLoading(false);
@@ -69,6 +76,7 @@ export function usePsvGeneration(environment: Environment): UsePsvGenerationRetu
     isLoading,
     error,
     response,
+    durationMs,
     generatePsvPdf,
     clearError,
     clearResponse,

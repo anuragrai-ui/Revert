@@ -3,10 +3,41 @@ import type { Environment } from '../types';
 import { fetchAccessToken } from '../services/api';
 import type { TokenFetchResult } from '../services/api';
 import { debugLog } from '../utils/debugLog';
+import { isTokenValid } from '../utils/jwt';
 
 type ErrorType = 'cors' | 'network' | 'auth' | null;
 
 const TAG = '[useAccessToken]';
+
+const tokenCacheKey = (environment: Environment) => `revertapi_token_${environment}`;
+
+function loadCachedToken(environment: Environment): string | null {
+  try {
+    const cached = localStorage.getItem(tokenCacheKey(environment));
+    if (!cached) return null;
+    if (isTokenValid(cached)) return cached;
+    localStorage.removeItem(tokenCacheKey(environment));
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheToken(environment: Environment, token: string): void {
+  try {
+    localStorage.setItem(tokenCacheKey(environment), token);
+  } catch {
+    // localStorage unavailable (private mode, quota, etc.) — non-critical
+  }
+}
+
+function clearCachedToken(environment: Environment): void {
+  try {
+    localStorage.removeItem(tokenCacheKey(environment));
+  } catch {
+    // ignore
+  }
+}
 
 interface UseAccessTokenReturn {
   token: string | null;
@@ -15,6 +46,7 @@ interface UseAccessTokenReturn {
   errorType: ErrorType;
   refreshToken: () => Promise<void>;
   setManualToken: (token: string) => void;
+  clearToken: () => void;
 }
 
 export function useAccessToken(environment: Environment): UseAccessTokenReturn {
@@ -35,6 +67,7 @@ export function useAccessToken(environment: Environment): UseAccessTokenReturn {
 
       if (result.token) {
         setToken(result.token);
+        cacheToken(environment, result.token);
         debugLog.info(`${TAG} Token SET (${result.token.length} chars)`);
       } else {
         setError(result.errorMessage || 'No access token received.');
@@ -55,10 +88,28 @@ export function useAccessToken(environment: Environment): UseAccessTokenReturn {
     setToken(manualToken);
     setError(null);
     setErrorType(null);
-  }, []);
+    cacheToken(environment, manualToken);
+  }, [environment]);
 
+  const clearToken = useCallback(() => {
+    debugLog.info(`${TAG} clearToken() env=${environment}`);
+    setToken(null);
+    clearCachedToken(environment);
+  }, [environment]);
+
+  // On mount and whenever the environment changes: try the cached token
+  // first (survives page refreshes) before falling back to a live fetch.
   useEffect(() => {
-    debugLog.info(`${TAG} env changed to "${environment}" — calling refreshToken()`);
+    const cached = loadCachedToken(environment);
+    if (cached) {
+      debugLog.info(`${TAG} Restored cached token for env="${environment}" (${cached.length} chars)`);
+      setToken(cached);
+      setError(null);
+      setErrorType(null);
+      return;
+    }
+
+    debugLog.info(`${TAG} env changed to "${environment}", no valid cache — calling refreshToken()`);
     void Promise.resolve().then(() => refreshToken());
   }, [environment, refreshToken]);
 
@@ -69,5 +120,6 @@ export function useAccessToken(environment: Environment): UseAccessTokenReturn {
     errorType,
     refreshToken,
     setManualToken,
+    clearToken,
   };
 }

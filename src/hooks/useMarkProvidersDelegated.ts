@@ -8,6 +8,7 @@ interface UseMarkProvidersDelegatedReturn {
   isLoading: boolean;
   error: ApiError | null;
   response: unknown | null;
+  durationMs: number | null;
   markDelegated: (
     token: string,
     organizationId: string,
@@ -22,6 +23,7 @@ export function useMarkProvidersDelegated(environment: Environment): UseMarkProv
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [response, setResponse] = useState<unknown | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
   const markDelegated = useCallback(async (
     token: string,
@@ -32,9 +34,12 @@ export function useMarkProvidersDelegated(environment: Environment): UseMarkProv
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setDurationMs(null);
 
     const TAG = '[useMarkProvidersDelegated]';
     debugLog.info(`${TAG} Starting delegated provider update: env=${environment}, providers=${providerIds.length}, org=${organizationId}`);
+
+    const startTime = Date.now();
 
     try {
       const result = await markProvidersDelegated(
@@ -46,11 +51,13 @@ export function useMarkProvidersDelegated(environment: Environment): UseMarkProv
       );
 
       setResponse(result);
+      setDurationMs(Date.now() - startTime);
       debugLog.info(`${TAG} Delegated provider update completed successfully.`);
     } catch (err) {
       const axiosError = err as AxiosError;
       const parsedError = parseApiError(axiosError);
       setError(parsedError);
+      setDurationMs(Date.now() - startTime);
       debugLog.error(`${TAG} Delegated provider update failed: ${parsedError.message}`);
     } finally {
       setIsLoading(false);
@@ -69,6 +76,7 @@ export function useMarkProvidersDelegated(environment: Environment): UseMarkProv
     isLoading,
     error,
     response,
+    durationMs,
     markDelegated,
     clearError,
     clearResponse,

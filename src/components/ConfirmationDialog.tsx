@@ -48,8 +48,8 @@ export function ConfirmationDialog({
 
   if (!isValid) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
           <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
             <AlertTriangle className="w-6 h-6" />
             <h3 className="text-lg font-semibold">Validation Error</h3>
@@ -75,32 +75,34 @@ export function ConfirmationDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             {isRevert ? (
-              <Shield className="w-6 h-6 text-brand-purple" />
+              <Shield className="w-6 h-6 text-brand-purple shrink-0" />
             ) : isGeneratePsv ? (
-              <RefreshCw className="w-6 h-6 text-brand-purple animate-spin-slow" />
+              <RefreshCw className="w-6 h-6 text-brand-purple animate-spin-slow shrink-0" />
             ) : (
-              <UserCheck className="w-6 h-6 text-emerald-600" />
+              <UserCheck className="w-6 h-6 text-emerald-600 shrink-0" />
             )}
-            <h3 className="text-lg font-semibold text-brand-midnight dark:text-white">
+            <h3 className="text-lg font-semibold text-brand-midnight dark:text-white truncate">
               {isRevert ? 'Confirm Revert Action' : isGeneratePsv ? 'Confirm PSV PDF Generation' : 'Confirm Delegated Provider Update'}
             </h3>
           </div>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0 ml-3"
             disabled={isLoading}
+            aria-label="Close"
+            title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto min-h-0">
           {/* Warning banner */}
           <div className={isRevert
             ? "p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg"
@@ -163,16 +165,16 @@ export function ConfirmationDialog({
 
               <div className={`grid grid-cols-1 gap-3 ${isMarkDelegated ? '' : 'sm:grid-cols-2'}`}>
                 {!isMarkDelegated && (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg min-w-0">
                     <p className="text-xs text-brand-gray dark:text-gray-500 uppercase mb-1">Workflow ID</p>
-                    <p className="font-medium text-brand-midnight dark:text-white font-mono text-sm">
+                    <p className="font-medium text-brand-midnight dark:text-white font-mono text-sm break-all">
                       {formData.workflowId}
                     </p>
                   </div>
                 )}
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg min-w-0">
                   <p className="text-xs text-brand-gray dark:text-gray-500 uppercase mb-1">Organization ID</p>
-                  <p className="font-medium text-brand-midnight dark:text-white font-mono text-sm">
+                  <p className="font-medium text-brand-midnight dark:text-white font-mono text-sm break-all">
                     {formData.organizationId}
                   </p>
                 </div>
@@ -242,7 +244,7 @@ export function ConfirmationDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 shrink-0">
           <button
             onClick={onCancel}
             disabled={isLoading}

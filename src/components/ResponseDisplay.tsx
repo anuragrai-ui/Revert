@@ -6,9 +6,14 @@ interface ResponseDisplayProps {
   response: unknown | null;
   error: ApiError | null;
   curlCommand: string;
+  durationMs?: number | null;
 }
 
-export function ResponseDisplay({ response, error, curlCommand }: ResponseDisplayProps) {
+function formatDuration(ms: number): string {
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`;
+}
+
+export function ResponseDisplay({ response, error, curlCommand, durationMs }: ResponseDisplayProps) {
   const [copiedCurl, setCopiedCurl] = useState(false);
   const [copiedResponse, setCopiedResponse] = useState(false);
   const [showCurl, setShowCurl] = useState(true);
@@ -44,6 +49,12 @@ export function ResponseDisplay({ response, error, curlCommand }: ResponseDispla
             <span className="font-semibold text-red-700">
               Error {error.status > 0 && `(${error.status})`}
             </span>
+            {durationMs != null && (
+              <span className="flex items-center gap-1 text-xs text-red-600 ml-2">
+                <Clock className="w-3 h-3" />
+                {formatDuration(durationMs)}
+              </span>
+            )}
           </div>
           <p className="text-red-700">{error.message}</p>
           {formattedErrorDetails && (
@@ -63,6 +74,7 @@ export function ResponseDisplay({ response, error, curlCommand }: ResponseDispla
               <span className="flex items-center gap-1 text-xs text-green-600 ml-2">
                 <Clock className="w-3 h-3" />
                 {new Date().toLocaleTimeString()}
+                {durationMs != null && ` · ${formatDuration(durationMs)}`}
               </span>
             </div>
             <button
